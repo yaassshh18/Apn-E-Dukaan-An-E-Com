@@ -1,19 +1,26 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
 import { Link } from 'react-router-dom';
-import { Search } from 'lucide-react';
+import { Search, MapPin } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
 
 const Home = () => {
+    const { user } = useContext(AuthContext);
     const [products, setProducts] = useState([]);
     const [search, setSearch] = useState('');
+    const [nearMe, setNearMe] = useState(false);
 
     useEffect(() => {
         fetchProducts();
-    }, [search]);
+    }, [search, nearMe]);
 
     const fetchProducts = async () => {
         try {
-            const res = await api.get(`products/?search=${search}`);
+            let url = `products/?search=${search}`;
+            if (nearMe && user && user.location) {
+                url += `&location=${user.location}`;
+            }
+            const res = await api.get(url);
             // DRF Pagination returns the array inside "results"
             if (res.data && res.data.results) {
                 setProducts(res.data.results);
@@ -51,6 +58,17 @@ const Home = () => {
                             <Search className="w-5 h-5"/>
                         </button>
                     </div>
+                    {user && user.location && (
+                        <div className="mt-4 flex justify-center">
+                            <button 
+                                onClick={() => setNearMe(!nearMe)} 
+                                className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-colors ${nearMe ? 'bg-accent text-white shadow-md' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}
+                            >
+                                <MapPin className="w-4 h-4"/> 
+                                {nearMe ? `Filtering items near: ${user.location}` : 'Show Items Near Me'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </section>
 

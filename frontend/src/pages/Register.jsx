@@ -9,6 +9,7 @@ const Register = () => {
         username: '',
         email: '',
         password: '',
+        location: '',
         role: 'BUYER'
     });
 
@@ -60,6 +61,17 @@ const Register = () => {
                             className="input-field" 
                             value={formData.password}
                             onChange={(e) => setFormData({...formData, password: e.target.value})}
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Your City/Area</label>
+                        <input 
+                            type="text" 
+                            className="input-field" 
+                            placeholder="e.g. Mumbai, Bandra"
+                            value={formData.location}
+                            onChange={(e) => setFormData({...formData, location: e.target.value})}
                             required
                         />
                     </div>

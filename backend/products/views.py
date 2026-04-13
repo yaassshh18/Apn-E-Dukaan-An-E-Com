@@ -20,10 +20,15 @@ class ProductViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         category_slug = self.request.query_params.get('category', None)
         search = self.request.query_params.get('search', None)
+        location = self.request.query_params.get('location', None)
+        
         if category_slug:
             queryset = queryset.filter(category__slug=category_slug)
         if search:
             queryset = queryset.filter(title__icontains=search)
+        if location:
+            queryset = queryset.filter(seller__location__icontains=location)
+            
         return queryset
 
 class ReviewViewSet(viewsets.ModelViewSet):
