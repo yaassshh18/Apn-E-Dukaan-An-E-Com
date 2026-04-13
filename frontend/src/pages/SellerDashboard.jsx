@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { Package, TrendingUp, DollarSign, Plus, X } from 'lucide-react';
+import { Package, TrendingUp, DollarSign, Plus, X, Truck } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const SellerDashboard = () => {
@@ -55,6 +55,16 @@ const SellerDashboard = () => {
             fetchData();
         } catch (err) {
             toast.error("Failed to add product");
+        }
+    };
+
+    const handleUpdateOrderStatus = async (orderId, newStatus) => {
+        try {
+            await api.patch(`orders/${orderId}/update_status/`, { status: newStatus });
+            toast.success("Order status dynamically updated!");
+            fetchData();
+        } catch (error) {
+            toast.error("Unable to modify order status");
         }
     };
 
@@ -161,10 +171,9 @@ const SellerDashboard = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-                {/* Recent Products */}
+            <div className="mb-12">
+                <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">Your Products</h2>
                 <div className="glass-card p-6">
-                    <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">Your Products</h2>
                     <div className="space-y-4">
                         {products.length === 0 ? <p className="text-gray-500">No products added yet.</p> : null}
                         {products.slice(0,5).map(prod => (
@@ -175,24 +184,50 @@ const SellerDashboard = () => {
                         ))}
                     </div>
                 </div>
+            </div>
 
-                {/* Recent Orders */}
-                <div className="glass-card p-6">
-                    <h2 className="text-xl font-bold mb-6 text-gray-800 border-b pb-4">Recent Orders</h2>
-                    <div className="space-y-4">
-                        {orders.length === 0 ? <p className="text-gray-500">No orders yet.</p> : null}
-                        {orders.map(order => (
-                            <div key={order.id} className="flex justify-between items-center bg-gray-50 p-4 rounded-xl">
-                                <div>
-                                    <span className="block font-bold text-gray-800">Order #{order.id}</span>
-                                    <span className="text-xs text-gray-500">{new Date(order.created_at).toLocaleDateString()}</span>
-                                </div>
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${order.status === 'PENDING' ? 'bg-warning/20 text-warning' : 'bg-accent/20 text-accent'}`}>
-                                    {order.status}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
+            {/* Orders Management */}
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2"><Truck className="w-6 h-6 text-primary"/> Fulfillment Center</h2>
+            <div className="glass-card overflow-hidden">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-gray-50 border-b text-gray-600 text-sm">
+                                <th className="p-4 font-medium">Order ID</th>
+                                <th className="p-4 font-medium">Date</th>
+                                <th className="p-4 font-medium">Total Amount</th>
+                                <th className="p-4 font-medium">Buyer</th>
+                                <th className="p-4 font-medium">Current Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {orders.map(order => (
+                                <tr key={order.id} className="border-b transition-colors hover:bg-gray-50/50">
+                                    <td className="p-4 font-bold text-gray-800">#{order.id}</td>
+                                    <td className="p-4 text-gray-500 text-sm">{new Date(order.created_at).toLocaleDateString()}</td>
+                                    <td className="p-4 text-primary font-bold">₹{order.total_price}</td>
+                                    <td className="p-4 text-gray-800">{order.buyer?.username || 'Buyer'}</td>
+                                    <td className="p-4">
+                                        <select 
+                                            className="px-3 py-1.5 rounded-lg border font-bold text-sm bg-white shadow-sm hover:border-primary transition-colors focus:outline-none"
+                                            value={order.status}
+                                            onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
+                                        >
+                                            <option value="PENDING">PENDING</option>
+                                            <option value="CONFIRMED">CONFIRMED</option>
+                                            <option value="SHIPPED">SHIPPED</option>
+                                            <option value="DELIVERED">DELIVERED</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                    {orders.length === 0 && (
+                        <div className="p-10 text-center text-gray-500">
+                            No orders received yet. Keep your inventory fresh!
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

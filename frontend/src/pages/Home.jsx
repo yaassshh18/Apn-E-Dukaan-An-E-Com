@@ -3,19 +3,21 @@ import api from '../api/axios';
 import { Link } from 'react-router-dom';
 import { Search, MapPin } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
+import useDebounce from '../hooks/useDebounce';
 
 const Home = () => {
     const { user } = useContext(AuthContext);
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
     const [search, setSearch] = useState('');
+    const debouncedSearch = useDebounce(search, 500);
     const [nearMe, setNearMe] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
 
     useEffect(() => {
         fetchProducts();
         fetchCategories();
-    }, [search, nearMe, selectedCategory]);
+    }, [debouncedSearch, nearMe, selectedCategory]);
 
     const fetchCategories = async () => {
         try {
@@ -28,7 +30,7 @@ const Home = () => {
 
     const fetchProducts = async () => {
         try {
-            let url = `products/?search=${search}`;
+            let url = `products/?search=${debouncedSearch}`;
             if (nearMe && user && user.location) {
                 url += `&location=${user.location}`;
             }
