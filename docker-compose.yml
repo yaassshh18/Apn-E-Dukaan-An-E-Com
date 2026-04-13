@@ -12,5 +12,27 @@ services:
     ports:
       - "5432:5432"
 
+  backend:
+    build: ./backend
+    command: >
+      bash -c "python manage.py migrate 
+      && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/apnedukaan
+      - DEBUG=True
+    depends_on:
+      - db
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
