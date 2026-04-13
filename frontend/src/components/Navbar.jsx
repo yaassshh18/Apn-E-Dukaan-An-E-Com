@@ -20,7 +20,7 @@ const Navbar = () => {
             <div className="flex items-center gap-6">
                 {user ? (
                     <>
-                        <Link to={user.role === 'SELLER' ? "/seller-dashboard" : "/buyer-dashboard"} className="text-gray-600 hover:text-primary transition-colors flex items-center gap-2 font-medium">
+                        <Link to={user.role === 'SELLER' ? "/seller-dashboard" : user.role === 'ADMIN' ? "/admin-dashboard" : "/buyer-dashboard"} className="text-gray-600 hover:text-primary transition-colors flex items-center gap-2 font-medium">
                             <User className="w-5 h-5" /> Dashboard
                         </Link>
                         <Link to="/chat" className="text-gray-600 hover:text-primary transition-colors flex items-center gap-2 font-medium">

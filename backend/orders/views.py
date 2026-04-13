@@ -46,6 +46,8 @@ class OrderViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        if getattr(user, 'role', '') == 'ADMIN' or user.is_staff:
+            return Order.objects.all()
         if user.role == 'SELLER':
             return Order.objects.filter(items__product__seller=user).distinct()
         return Order.objects.filter(buyer=user)

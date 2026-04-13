@@ -30,6 +30,12 @@ class ProductViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(seller__location__icontains=location)
             
         return queryset
+        
+    def destroy(self, request, *args, **kwargs):
+        product = self.get_object()
+        if request.user == product.seller or request.user.role == 'ADMIN' or request.user.is_staff:
+            return super().destroy(request, *args, **kwargs)
+        return Response({"error": "Not authorized to delete this product"}, status=status.HTTP_403_FORBIDDEN)
 
 class ReviewViewSet(viewsets.ModelViewSet):
     queryset = Review.objects.all()

@@ -16,6 +16,7 @@ import ProductDetail from './pages/ProductDetail';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import Chat from './pages/Chat';
+import AdminDashboard from './pages/AdminDashboard';
 
 function App() {
   const { user, loading } = useContext(AuthContext);
@@ -37,6 +38,7 @@ function App() {
             <Route path="/chat" element={user ? <Chat /> : <Navigate to="/login" />} />
             <Route path="/buyer-dashboard" element={user?.role === 'BUYER' ? <BuyerDashboard /> : <Navigate to="/" />} />
             <Route path="/seller-dashboard" element={user?.role === 'SELLER' ? <SellerDashboard /> : <Navigate to="/" />} />
+            <Route path="/admin-dashboard" element={user?.role === 'ADMIN' ? <AdminDashboard /> : <Navigate to="/" />} />
           </Routes>
         </main>
       </div>
