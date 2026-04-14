@@ -1,27 +1,43 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useContext } from 'react';
+import { useContext, Suspense, lazy, useEffect } from 'react';
 import { AuthContext } from './context/AuthContext';
+import toast from 'react-hot-toast';
 
 // Layouts
 import Navbar from './components/Navbar';
 import BottomNav from './components/BottomNav';
 
 // Pages
-import Home from './pages/Home';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgetPass from './pages/ForgetPass';
-import AdminDashboard from './pages/AdminDashboard';
-import BuyerDashboard from './pages/BuyerDashboard';
-import SellerDashboard from './pages/SellerDashboard';
-import ProductDetail from './pages/ProductDetail';
-import Cart from './pages/Cart';
-import Checkout from './pages/Checkout';
-import Chat from './pages/Chat';
-import Wishlist from './pages/Wishlist';
-import SellerProfile from './pages/SellerProfile';
-import Legal from './pages/Legal';
+const Home = lazy(() => import('./pages/Home'));
+const Login = lazy(() => import('./pages/Login'));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgetPass = lazy(() => import('./pages/ForgetPass'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const BuyerDashboard = lazy(() => import('./pages/BuyerDashboard'));
+const SellerDashboard = lazy(() => import('./pages/SellerDashboard'));
+const ProductDetail = lazy(() => import('./pages/ProductDetail'));
+const Cart = lazy(() => import('./pages/Cart'));
+const Checkout = lazy(() => import('./pages/Checkout'));
+const Chat = lazy(() => import('./pages/Chat'));
+const Wishlist = lazy(() => import('./pages/Wishlist'));
+const SellerProfile = lazy(() => import('./pages/SellerProfile'));
+const Legal = lazy(() => import('./pages/Legal'));
+const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 import Footer from './components/Footer';
+
+const RoleProtectedRoute = ({ user, allowedRole, redirectTo = '/' , children }) => {
+  useEffect(() => {
+    if (!user) return;
+    if (user.role !== allowedRole) {
+      toast.error(`Login as ${allowedRole.toLowerCase()} to access this page.`);
+    }
+  }, [user, allowedRole]);
+
+  if (!user) return <Navigate to="/login" />;
+  if (user.role !== allowedRole) return <Navigate to={redirectTo} />;
+  return children;
+};
 
 function App() {
   const { user, loading } = useContext(AuthContext);
@@ -33,22 +49,26 @@ function App() {
       <div className="min-h-screen flex flex-col">
         <Navbar />
         <main className="flex-grow pt-16">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-            <Route path="/register" element={!user ? <Register /> : <Navigate to="/" />} />
-            <Route path="/forgot-password" element={!user ? <ForgetPass /> : <Navigate to="/" />} />
-            <Route path="/product/:id" element={<ProductDetail />} />
-            <Route path="/cart" element={user ? <Cart /> : <Navigate to="/login" />} />
-            <Route path="/wishlist" element={user ? <Wishlist /> : <Navigate to="/login" />} />
-            <Route path="/checkout" element={user ? <Checkout /> : <Navigate to="/login" />} />
-            <Route path="/chat" element={user ? <Chat /> : <Navigate to="/login" />} />
-            <Route path="/buyer-dashboard" element={user?.role === 'BUYER' ? <BuyerDashboard /> : <Navigate to="/" />} />
-            <Route path="/seller-dashboard" element={user?.role === 'SELLER' ? <SellerDashboard /> : <Navigate to="/" />} />
-            <Route path="/admin-dashboard" element={user?.role === 'ADMIN' ? <AdminDashboard /> : <Navigate to="/" />} />
-            <Route path="/seller/:id" element={<SellerProfile />} />
-            <Route path="/legal/:section" element={<Legal />} />
-          </Routes>
+          <Suspense fallback={<div className="min-h-[60vh] flex items-center justify-center">Loading page...</div>}>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/admin-login" element={<AdminLogin />} />
+              <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={!user ? <ForgetPass /> : <Navigate to="/" />} />
+              <Route path="/product/:id" element={<ProductDetail />} />
+              <Route path="/cart" element={user ? <Cart /> : <Navigate to="/login" />} />
+              <Route path="/wishlist" element={user ? <Wishlist /> : <Navigate to="/login" />} />
+              <Route path="/checkout" element={user ? <Checkout /> : <Navigate to="/login" />} />
+              <Route path="/chat" element={user ? <Chat /> : <Navigate to="/login" />} />
+              <Route path="/profile" element={user ? <ProfileSettings /> : <Navigate to="/login" />} />
+              <Route path="/buyer-dashboard" element={<RoleProtectedRoute user={user} allowedRole="BUYER"><BuyerDashboard /></RoleProtectedRoute>} />
+              <Route path="/seller-dashboard" element={<RoleProtectedRoute user={user} allowedRole="SELLER"><SellerDashboard /></RoleProtectedRoute>} />
+              <Route path="/admin-dashboard" element={<RoleProtectedRoute user={user} allowedRole="ADMIN"><AdminDashboard /></RoleProtectedRoute>} />
+              <Route path="/seller/:id" element={<SellerProfile />} />
+              <Route path="/legal/:section" element={<Legal />} />
+            </Routes>
+          </Suspense>
         </main>
         {user && <BottomNav />}
         <Footer />

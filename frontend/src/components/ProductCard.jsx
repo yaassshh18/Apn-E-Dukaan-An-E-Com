@@ -16,6 +16,7 @@ const ProductCard = ({ product }) => {
         if (!user) return navigate('/login');
         try {
             await api.post('wishlist/', { product: product.id });
+            window.dispatchEvent(new Event('wishlist-updated'));
             toast.success('Added to Wishlist ❤️');
         } catch (error) {
             const message = error.response?.data?.detail || error.response?.data?.error || error.response?.data?.non_field_errors?.[0] || '';

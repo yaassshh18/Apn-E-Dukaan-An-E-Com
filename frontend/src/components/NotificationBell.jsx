@@ -9,8 +9,8 @@ const NotificationBell = () => {
     useEffect(() => {
         const fetchNotifications = async () => {
             try {
-                const res = await api.get('/api/notifications/');
-                setNotifications(res.data);
+                const res = await api.get('notifications/');
+                setNotifications(res.data?.results || res.data || []);
             } catch {
                 console.error("Failed to fetch notifications");
             }
@@ -22,10 +22,19 @@ const NotificationBell = () => {
 
     const markAsRead = async (id) => {
         try {
-            await api.patch(`/api/notifications/${id}/`, { is_read: true });
+            await api.patch(`notifications/${id}/`, { is_read: true });
             setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
         } catch {
             console.error("Failed to mark as read");
+        }
+    };
+
+    const markAllRead = async () => {
+        try {
+            await api.post('notifications/mark_all_read/');
+            setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+        } catch {
+            console.error("Failed to mark all as read");
         }
     };
 
@@ -42,7 +51,12 @@ const NotificationBell = () => {
             {isOpen && (
                 <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl overflow-hidden z-50 border border-gray-100">
                     <div className="p-3 bg-gray-50 border-b border-gray-100 font-semibold text-gray-800">
-                        Notifications
+                        <div className="flex items-center justify-between">
+                            <span>Notifications</span>
+                            {notifications.length > 0 && (
+                                <button onClick={markAllRead} className="text-xs text-primary hover:underline">Mark all read</button>
+                            )}
+                        </div>
                     </div>
                     <div className="max-h-64 overflow-y-auto">
                         {notifications.length === 0 ? (
@@ -55,6 +69,7 @@ const NotificationBell = () => {
                                     className={`p-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 transition-colors ${notif.is_read ? 'opacity-60' : 'bg-blue-50/30'}`}
                                 >
                                     <p className="text-sm text-gray-800">{notif.message}</p>
+                                    <p className="text-[11px] text-gray-500 mt-1 uppercase">{notif.notification_type || 'Update'}</p>
                                     <p className="text-xs text-gray-400 mt-1">{new Date(notif.created_at).toLocaleString()}</p>
                                 </div>
                             ))

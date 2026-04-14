@@ -51,6 +51,33 @@ class CartViewSet(viewsets.ViewSet):
         CartItem.objects.filter(cart=cart, product_id=product_id).delete()
         return Response(CartSerializer(cart).data)
 
+    @action(detail=False, methods=['patch'])
+    def update_item(self, request):
+        cart = Cart.objects.filter(user=request.user).first()
+        if not cart:
+            return Response({"error": "Cart not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        product_id = request.data.get('product_id')
+        quantity = request.data.get('quantity')
+        try:
+            quantity = int(quantity)
+            if quantity <= 0:
+                return Response({"error": "Quantity must be greater than zero"}, status=status.HTTP_400_BAD_REQUEST)
+        except (ValueError, TypeError):
+            return Response({"error": "Invalid quantity"}, status=status.HTTP_400_BAD_REQUEST)
+
+        item = CartItem.objects.filter(cart=cart, product_id=product_id).select_related('product').first()
+        if not item:
+            return Response({"error": "Cart item not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if quantity > item.product.stock:
+            return Response({"error": f"Only {item.product.stock} items left in stock"}, status=status.HTTP_400_BAD_REQUEST)
+
+        item.quantity = quantity
+        item.save()
+        cart = Cart.objects.prefetch_related('items__product__seller', 'items__product__category').get(id=cart.id)
+        return Response(CartSerializer(cart).data)
+
 class OrderViewSet(viewsets.ModelViewSet):
     serializer_class = OrderSerializer
     permission_classes = [permissions.IsAuthenticated]

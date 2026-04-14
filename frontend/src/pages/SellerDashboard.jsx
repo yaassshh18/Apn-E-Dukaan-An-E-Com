@@ -17,6 +17,7 @@ const SellerDashboard = () => {
     const [stock, setStock] = useState('1');
     const [categoryId, setCategoryId] = useState('');
     const [image, setImage] = useState(null);
+    const [editingProduct, setEditingProduct] = useState(null);
 
     const fetchData = async () => {
         try {
@@ -62,11 +63,19 @@ const SellerDashboard = () => {
         if (image) formData.append('image', image);
 
         try {
-            await api.post('products/', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            });
-            toast.success("Product added successfully!");
+            if (editingProduct) {
+                await api.patch(`products/${editingProduct.id}/`, formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                toast.success("Product updated successfully!");
+            } else {
+                await api.post('products/', formData, {
+                    headers: { 'Content-Type': 'multipart/form-data' }
+                });
+                toast.success("Product added successfully!");
+            }
             setIsAddingProduct(false);
+            setEditingProduct(null);
             setTitle(''); setDescription(''); setPrice(''); setStock('1'); setImage(null);
             fetchData();
         } catch {
@@ -81,6 +90,27 @@ const SellerDashboard = () => {
             fetchData();
         } catch {
             toast.error("Unable to modify order status");
+        }
+    };
+
+    const handleEditProduct = (product) => {
+        setEditingProduct(product);
+        setIsAddingProduct(true);
+        setTitle(product.title || '');
+        setDescription(product.description || '');
+        setPrice(product.price || '');
+        setStock(String(product.stock || 1));
+        setCategoryId(product.category?.id ? String(product.category.id) : '');
+        setImage(null);
+    };
+
+    const handleQuickRestock = async (product) => {
+        try {
+            await api.patch(`products/${product.id}/`, { stock: (product.stock || 0) + 10 });
+            toast.success('Stock increased by 10');
+            fetchData();
+        } catch {
+            toast.error('Failed to restock');
         }
     };
 
@@ -107,7 +137,7 @@ const SellerDashboard = () => {
             {isAddingProduct && (
                 <div className="bg-white p-8 rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-gray-100 animate-slide-up relative">
                     <h2 className="text-2xl font-display font-bold mb-8 flex items-center gap-2 border-b border-gray-100 pb-4">
-                        <Package className="w-6 h-6 text-primary" /> Create New Listing
+                        <Package className="w-6 h-6 text-primary" /> {editingProduct ? 'Edit Listing' : 'Create New Listing'}
                     </h2>
                     <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-8">
                         <div className="space-y-6">
@@ -258,8 +288,15 @@ const SellerDashboard = () => {
                                          {prod.image ? <img src={prod.image} className="w-full h-full object-cover rounded-lg" /> : <Package className="w-full h-full p-2 text-gray-400"/>}
                                      </div>
                                     <span className="font-bold text-gray-800 truncate text-sm">{prod.title}</span>
+                                    {prod.stock <= 3 && <span className="text-[10px] px-2 py-0.5 rounded-full bg-orange-50 text-orange-600">Low stock</span>}
                                 </div>
-                                <span className="text-primary font-black text-sm bg-primary/5 px-2 py-1 rounded">₹{prod.price}</span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-primary font-black text-sm bg-primary/5 px-2 py-1 rounded">₹{prod.price}</span>
+                                    <button onClick={() => handleEditProduct(prod)} className="text-xs px-2 py-1 rounded border border-gray-200 hover:bg-gray-50">Edit</button>
+                                    {prod.stock <= 3 && (
+                                        <button onClick={() => handleQuickRestock(prod)} className="text-xs px-2 py-1 rounded bg-green-50 text-green-700">Restock</button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                     </div>

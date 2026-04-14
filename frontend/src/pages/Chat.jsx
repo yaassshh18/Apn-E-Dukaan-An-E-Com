@@ -2,7 +2,7 @@ import { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
-import { Send, ArrowLeft, MoreVertical, Shield, MessageSquare } from 'lucide-react';
+import { Send, ArrowLeft, Shield, MessageSquare, Flag } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Chat = () => {
@@ -84,8 +84,40 @@ const Chat = () => {
             await api.patch(`chat/${msgId}/`, { offer_status: status });
             fetchMessages();
             toast.success(`Offer ${status}!`);
+            if (status === 'ACCEPTED') {
+                const accepted = messages.find((m) => m.id === msgId);
+                if (accepted?.product) {
+                    navigate('/checkout', { state: { offerPrice: accepted.offer_amount, productId: accepted.product.id } });
+                }
+            }
         } catch {
             toast.error("Failed to update offer");
+        }
+    };
+
+    const handleCounterOffer = async (msgId) => {
+        const amount = window.prompt('Enter your counter-offer amount (INR)');
+        if (!amount) return;
+        try {
+            await api.post(`chat/${msgId}/counter_offer/`, { offer_amount: amount });
+            toast.success('Counter offer sent');
+            fetchMessages();
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to send counter offer');
+        }
+    };
+
+    const handleReportMessage = async (msg) => {
+        try {
+            const reportedUserId = msg.sender.id === user.id ? msg.receiver.id : msg.sender.id;
+            await api.post('reports/', {
+                reported_user: reportedUserId,
+                reported_product: msg.product?.id || null,
+                reason: `Reported from chat message #${msg.id}: ${msg.content?.slice(0, 150)}`
+            });
+            toast.success('Message reported');
+        } catch {
+            toast.error('Failed to submit report');
         }
     };
 
@@ -192,6 +224,7 @@ const Chat = () => {
                                                             <div className="flex gap-2 ml-auto">
                                                                 <button onClick={() => handleOfferAction(msg.id, 'ACCEPTED')} className="bg-green-500 hover:bg-green-600 active:bg-green-700 text-white font-bold text-sm px-4 py-1.5 rounded-lg shadow-sm transition-colors">Accept</button>
                                                                 <button onClick={() => handleOfferAction(msg.id, 'REJECTED')} className="bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-600 font-bold text-sm px-4 py-1.5 rounded-lg shadow-sm transition-colors">Decline</button>
+                                                                <button onClick={() => handleCounterOffer(msg.id)} className="bg-indigo-500 hover:bg-indigo-600 text-white font-bold text-sm px-4 py-1.5 rounded-lg shadow-sm transition-colors">Counter</button>
                                                             </div>
                                                         )}
                                                     </div>
@@ -200,6 +233,9 @@ const Chat = () => {
 
                                             <p className="text-base whitespace-pre-wrap break-words font-medium leading-relaxed">{msg.content}</p>
                                             <div className="flex items-center justify-end gap-1 mt-1">
+                                                <button onClick={() => handleReportMessage(msg)} className="text-[10px] text-red-400 hover:text-red-600 inline-flex items-center gap-1 mr-2">
+                                                    <Flag className="w-3 h-3" /> Report
+                                                </button>
                                                 <span className="text-[10px] text-gray-500/80 font-bold">
                                                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                 </span>

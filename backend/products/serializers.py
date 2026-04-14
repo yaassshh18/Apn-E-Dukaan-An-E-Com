@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import Category, Product, Review, Wishlist
 from users.serializers import UserSerializer
+from orders.models import OrderItem
 
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -9,6 +10,11 @@ class CategorySerializer(serializers.ModelSerializer):
 
 class ReviewSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
+    verified_purchase = serializers.SerializerMethodField()
+
+    def get_verified_purchase(self, obj):
+        return OrderItem.objects.filter(order__buyer=obj.user, product=obj.product).exists()
+
     class Meta:
         model = Review
         fields = '__all__'

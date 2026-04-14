@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, ShoppingBag } from 'lucide-react';
 
 const Login = () => {
-    const { initiateLogin, verifyLogin, resendOtp } = useContext(AuthContext);
+    const { user, initiateLogin, verifyLogin, resendOtp, logout } = useContext(AuthContext);
     const [loginUsername, setLoginUsername] = useState('');
     const [loginEmail, setLoginEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -19,6 +19,7 @@ const Login = () => {
     const [countdown, setCountdown] = useState(60);
 
     const navigate = useNavigate();
+    const dashboardPath = user?.role === 'SELLER' ? '/seller-dashboard' : user?.role === 'ADMIN' ? '/admin-dashboard' : '/buyer-dashboard';
 
     // Timer logic for resend Code
     useEffect(() => {
@@ -177,6 +178,30 @@ const Login = () => {
                         <h2 className="text-4xl font-display font-extrabold text-gray-900 mb-2">Welcome Back 👋</h2>
                         <p className="text-gray-500 text-lg">Login to explore exclusive local deals.</p>
                     </div>
+
+                    {user && (
+                        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                            <p className="text-sm font-semibold text-amber-900">
+                                You are logged in as {user.username} ({user.role}). Logout to continue with another account.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate(dashboardPath)}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-amber-300 text-amber-900 hover:bg-amber-100"
+                                >
+                                    Continue as current user
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={logout}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-black"
+                                >
+                                    Switch account (Logout)
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     
                     <form onSubmit={handleLoginSubmit} className="space-y-6">
                         <div>

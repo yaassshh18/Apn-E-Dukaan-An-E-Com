@@ -49,6 +49,16 @@ const Cart = () => {
             toast.error("Failed to remove item");
         }
     };
+
+    const handleUpdateQuantity = async (productId, nextQty) => {
+        if (nextQty < 1) return;
+        try {
+            await api.patch('cart/update_item/', { product_id: productId, quantity: nextQty });
+            fetchCart();
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to update quantity');
+        }
+    };
     
     const handleCheckout = () => {
         navigate('/checkout');
@@ -104,9 +114,16 @@ const Cart = () => {
                                     <div className="flex-grow w-full text-center sm:text-left min-w-0">
                                         <h3 className="font-display font-extrabold text-xl text-gray-900 mb-1 hover:text-primary transition-colors truncate">{item.product?.title}</h3>
                                         <p className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary mb-2">₹{item.product?.price}</p>
-                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold shadow-sm">
-                                            Qty: {item.quantity}
-                                        </span>
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            <div className="inline-flex items-center gap-2 px-2 py-1 bg-gray-100 text-gray-700 rounded-lg text-sm font-bold shadow-sm">
+                                                <button onClick={(e) => { e.preventDefault(); handleUpdateQuantity(item.product?.id, item.quantity - 1); }} className="px-2">-</button>
+                                                <span>Qty: {item.quantity}</span>
+                                                <button onClick={(e) => { e.preventDefault(); handleUpdateQuantity(item.product?.id, item.quantity + 1); }} className="px-2">+</button>
+                                            </div>
+                                            <span className="text-sm font-semibold text-gray-500">
+                                                Item total: ₹{(parseFloat(item.product?.price || 0) * item.quantity).toFixed(2)}
+                                            </span>
+                                        </div>
                                     </div>
                                 </Link>
                                 <button onClick={() => handleRemove(item.product?.id)} className="absolute top-4 right-4 sm:relative sm:top-auto sm:right-auto p-3 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors shadow-sm border border-transparent hover:border-red-100 bg-white">

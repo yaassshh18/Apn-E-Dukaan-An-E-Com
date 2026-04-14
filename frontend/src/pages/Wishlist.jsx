@@ -2,7 +2,7 @@ import { useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import ProductCard from '../components/ProductCard';
-import { Heart } from 'lucide-react';
+import { Heart, Trash2, ShoppingCart } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Wishlist = () => {
@@ -21,6 +21,28 @@ const Wishlist = () => {
         };
         loadWishlist();
     }, [user]);
+
+    const handleRemove = async (wishlistId) => {
+        try {
+            await api.delete(`wishlist/${wishlistId}/`);
+            setWishlist((prev) => prev.filter((item) => item.id !== wishlistId));
+            window.dispatchEvent(new Event('wishlist-updated'));
+            toast.success('Removed from wishlist');
+        } catch {
+            toast.error('Failed to remove item');
+        }
+    };
+
+    const handleMoveToCart = async (wishlistId) => {
+        try {
+            await api.post('wishlist/move_to_cart/', { wishlist_id: wishlistId, quantity: 1 });
+            setWishlist((prev) => prev.filter((item) => item.id !== wishlistId));
+            window.dispatchEvent(new Event('wishlist-updated'));
+            toast.success('Moved to cart');
+        } catch (error) {
+            toast.error(error.response?.data?.error || 'Failed to move item to cart');
+        }
+    };
 
     return (
         <div className="min-h-screen px-6 lg:px-20 pt-32 pb-20 bg-background">
@@ -42,7 +64,23 @@ const Wishlist = () => {
                 ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
                         {wishlist.map(item => (
-                            <ProductCard key={item.id} product={item.product_details} />
+                            <div key={item.id} className="space-y-3">
+                                <ProductCard product={item.product_details} />
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button
+                                        onClick={() => handleMoveToCart(item.id)}
+                                        className="inline-flex items-center justify-center gap-2 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:opacity-90"
+                                    >
+                                        <ShoppingCart className="w-4 h-4" /> Move to Cart
+                                    </button>
+                                    <button
+                                        onClick={() => handleRemove(item.id)}
+                                        className="inline-flex items-center justify-center gap-2 py-2 rounded-lg border border-gray-200 text-gray-700 text-sm font-semibold hover:bg-gray-50"
+                                    >
+                                        <Trash2 className="w-4 h-4" /> Remove
+                                    </button>
+                                </div>
+                            </div>
                         ))}
                     </div>
                 )}

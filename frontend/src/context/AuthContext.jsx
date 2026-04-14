@@ -8,7 +8,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const logout = useCallback(() => {
+    const resetAuthState = useCallback(() => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         sessionStorage.removeItem('access_token');
@@ -16,16 +16,20 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
     }, []);
 
+    const logout = useCallback(() => {
+        resetAuthState();
+    }, [resetAuthState]);
+
     const fetchProfile = useCallback(async () => {
         try {
             const res = await api.get('auth/profile/');
             setUser(res.data);
         } catch {
-            logout();
+            resetAuthState();
         } finally {
             setLoading(false);
         }
-    }, [logout]);
+    }, [resetAuthState]);
 
     useEffect(() => {
         const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
@@ -38,12 +42,15 @@ export const AuthProvider = ({ children }) => {
 
     // Step 1: Request 2FA OTP
     const initiateLogin = async (username, email, password) => {
+        resetAuthState();
         const res = await api.post('auth/login/', { username, email, password });
         return res.data; // e.g. { message: "Credentials verified...", email: "..." }
     };
 
     // Step 2: Verify 2FA OTP and actually log in
     const verifyLogin = async (email, otp_code, rememberMe = true) => {
+        // Always start a new session cleanly before persisting new tokens.
+        resetAuthState();
         const res = await api.post('auth/login/otp/verify/', { email, otp_code });
         if (rememberMe) {
             localStorage.setItem('access_token', res.data.access);
@@ -74,7 +81,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     return (
-        <AuthContext.Provider value={{ user, initiateLogin, verifyLogin, register, verifyRegistration, resendOtp, logout, loading }}>
+        <AuthContext.Provider value={{ user, initiateLogin, verifyLogin, register, verifyRegistration, resendOtp, logout, resetAuthState, loading }}>
             {children}
         </AuthContext.Provider>
     );

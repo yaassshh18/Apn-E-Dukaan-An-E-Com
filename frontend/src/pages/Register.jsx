@@ -1,12 +1,14 @@
 import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, ShieldCheck } from 'lucide-react';
 
 const Register = () => {
-    const { register, verifyRegistration, resendOtp } = useContext(AuthContext);
+    const { user, register, verifyRegistration, resendOtp, logout } = useContext(AuthContext);
     const [showPassword, setShowPassword] = useState(false);
+    const [searchParams] = useSearchParams();
+    const initialRole = searchParams.get('role') === 'SELLER' ? 'SELLER' : 'BUYER';
     
     // Core Registration State
     const [formData, setFormData] = useState({
@@ -14,7 +16,7 @@ const Register = () => {
         email: '',
         password: '',
         location: '',
-        role: 'BUYER'
+        role: initialRole
     });
 
     // Verification State
@@ -22,6 +24,7 @@ const Register = () => {
     const [otpCode, setOtpCode] = useState('');
     const [countdown, setCountdown] = useState(60);
     const navigate = useNavigate();
+    const dashboardPath = user?.role === 'SELLER' ? '/seller-dashboard' : user?.role === 'ADMIN' ? '/admin-dashboard' : '/buyer-dashboard';
 
     // Timer logic for resend Code
     useEffect(() => {
@@ -50,9 +53,9 @@ const Register = () => {
         } catch (error) {
             const errorData = error.response?.data;
             if (errorData && errorData.username) {
-                toast.error(errorData.username[0]);
+                toast.error('This username is already used. Try logging in, or choose another username.');
             } else if (errorData && errorData.email) {
-                toast.error(errorData.email[0]);
+                toast.error('This email is already registered. Try logging in, or use another email.');
             } else {
                 toast.error('Registration failed. Please try again.');
             }
@@ -183,6 +186,30 @@ const Register = () => {
                         <h2 className="text-3xl font-display font-extrabold text-gray-900 mb-2">Create Account 🚀</h2>
                         <p className="text-gray-500">Sign up to start buying or selling.</p>
                     </div>
+
+                    {user && (
+                        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+                            <p className="text-sm font-semibold text-amber-900">
+                                You are logged in as {user.username} ({user.role}). Logout to continue with another account.
+                            </p>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => navigate(dashboardPath)}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-amber-300 text-amber-900 hover:bg-amber-100"
+                                >
+                                    Continue as current user
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={logout}
+                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-black"
+                                >
+                                    Switch account (Logout)
+                                </button>
+                            </div>
+                        </div>
+                    )}
                     
                     <form onSubmit={handleRegisterSubmit} className="space-y-5">
                         <div className="grid grid-cols-1 gap-5">

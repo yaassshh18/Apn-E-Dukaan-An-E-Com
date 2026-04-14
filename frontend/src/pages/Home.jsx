@@ -18,6 +18,12 @@ const Home = () => {
     const debouncedSearch = useDebounce(search, 500);
     const [nearMe, setNearMe] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const [sortBy, setSortBy] = useState('newest');
+    const [minPrice, setMinPrice] = useState('');
+    const [maxPrice, setMaxPrice] = useState('');
+    const [minRating, setMinRating] = useState('');
+    const [inStockOnly, setInStockOnly] = useState(false);
+    const [savedSearches, setSavedSearches] = useState(() => JSON.parse(localStorage.getItem('savedSearches') || '[]'));
     useEffect(() => {
         const loadHomeData = async () => {
             try {
@@ -43,6 +49,21 @@ const Home = () => {
                 if (selectedCategory) {
                     url += `&category=${selectedCategory}`;
                 }
+                if (sortBy && sortBy !== 'newest') {
+                    url += `&sort=${sortBy}`;
+                }
+                if (minPrice) {
+                    url += `&min_price=${minPrice}`;
+                }
+                if (maxPrice) {
+                    url += `&max_price=${maxPrice}`;
+                }
+                if (minRating) {
+                    url += `&min_rating=${minRating}`;
+                }
+                if (inStockOnly) {
+                    url += '&in_stock=true';
+                }
 
                 const res = await api.get(url);
                 const currentProducts = res.data?.results || res.data || [];
@@ -64,7 +85,32 @@ const Home = () => {
         };
 
         loadHomeData();
-    }, [debouncedSearch, nearMe, selectedCategory, user]);
+    }, [debouncedSearch, nearMe, selectedCategory, user, sortBy, minPrice, maxPrice, minRating, inStockOnly]);
+
+    const handleSaveSearch = () => {
+        const entry = {
+            term: search,
+            category: selectedCategory,
+            sortBy,
+            minPrice,
+            maxPrice,
+            minRating,
+            inStockOnly
+        };
+        const next = [entry, ...savedSearches].slice(0, 5);
+        localStorage.setItem('savedSearches', JSON.stringify(next));
+        setSavedSearches(next);
+    };
+
+    const applySavedSearch = (entry) => {
+        setSearch(entry.term || '');
+        setSelectedCategory(entry.category || null);
+        setSortBy(entry.sortBy || 'newest');
+        setMinPrice(entry.minPrice || '');
+        setMaxPrice(entry.maxPrice || '');
+        setMinRating(entry.minRating || '');
+        setInStockOnly(Boolean(entry.inStockOnly));
+    };
 
     return (
         <div className="min-h-screen">
@@ -98,6 +144,20 @@ const Home = () => {
                             Search
                         </button>
                     </div>
+                    <div className="mt-4 flex justify-center gap-2">
+                        <button onClick={handleSaveSearch} className="px-4 py-2 text-sm rounded-full bg-white border border-gray-200 hover:bg-gray-50">
+                            Save this search
+                        </button>
+                    </div>
+                    {savedSearches.length > 0 && (
+                        <div className="mt-4 flex flex-wrap justify-center gap-2">
+                            {savedSearches.map((entry, idx) => (
+                                <button key={`saved-${idx}`} onClick={() => applySavedSearch(entry)} className="px-3 py-1 text-xs rounded-full bg-gray-100 hover:bg-gray-200">
+                                    {entry.term || 'Saved filter'}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     {user && user.location && (
                         <div className="mt-8 flex justify-center animate-fade-in">
                             <button 
@@ -143,6 +203,26 @@ const Home = () => {
                             </h2>
                             <p className="text-gray-500 mt-2">Discover the best things around you.</p>
                         </div>
+                    </div>
+                    <div className="mb-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="input-field">
+                            <option value="newest">Newest</option>
+                            <option value="trending">Trending</option>
+                            <option value="price_low">Price: Low to High</option>
+                            <option value="price_high">Price: High to Low</option>
+                            <option value="rating">Top Rated</option>
+                        </select>
+                        <input value={minPrice} onChange={(e) => setMinPrice(e.target.value)} type="number" placeholder="Min price" className="input-field" />
+                        <input value={maxPrice} onChange={(e) => setMaxPrice(e.target.value)} type="number" placeholder="Max price" className="input-field" />
+                        <select value={minRating} onChange={(e) => setMinRating(e.target.value)} className="input-field">
+                            <option value="">Any rating</option>
+                            <option value="4">4+ stars</option>
+                            <option value="4.5">4.5+ stars</option>
+                        </select>
+                        <label className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-gray-200">
+                            <input checked={inStockOnly} onChange={(e) => setInStockOnly(e.target.checked)} type="checkbox" />
+                            <span className="text-sm">In stock only</span>
+                        </label>
                     </div>
                     {products.length === 0 ? (
                         <div className="glass-card p-20 flex flex-col items-center justify-center text-center animate-fade-in">

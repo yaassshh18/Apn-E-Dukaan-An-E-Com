@@ -1,16 +1,20 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { CreditCard, Banknote } from 'lucide-react';
 
 const Checkout = () => {
     const navigate = useNavigate();
+    const location = useLocation();
 
     const [paymentMethod, setPaymentMethod] = useState('COD');
     const [address, setAddress] = useState('');
+    const [cartSummary, setCartSummary] = useState({ items: [] });
+    const offerPrice = location.state?.offerPrice ? parseFloat(location.state.offerPrice) : null;
+    const offerProductId = location.state?.productId || null;
 
     // Load Razorpay Script dynamically
     useEffect(() => {
@@ -18,6 +22,21 @@ const Checkout = () => {
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.async = true;
         document.body.appendChild(script);
+
+        const loadCart = async () => {
+            try {
+                const res = await api.get('cart/');
+                const payload = res.data?.results
+                    ? res.data.results[0]
+                    : Array.isArray(res.data)
+                        ? res.data[0]
+                        : res.data;
+                setCartSummary(payload || { items: [] });
+            } catch {
+                setCartSummary({ items: [] });
+            }
+        };
+        loadCart();
     }, []);
 
     const generateInvoice = (orderId) => {
@@ -35,6 +54,10 @@ const Checkout = () => {
 
     const handleCheckoutSubmit = async (e) => {
         e.preventDefault();
+        if (!cartSummary.items?.length) {
+            toast.error('Your cart is empty.');
+            return;
+        }
 
         if (paymentMethod === 'ONLINE') {
             // Mock Razorpay Flow
@@ -84,6 +107,13 @@ const Checkout = () => {
              <div className="glass-card p-10">
                  <h1 className="text-3xl font-extrabold mb-4 border-b pb-4">Checkout Process</h1>
                  <p className="text-gray-600 mb-8">Confirm your delivery details to place the order.</p>
+                <div className="mb-6 rounded-xl border border-gray-100 bg-gray-50 p-4 text-left">
+                    <p className="font-semibold text-gray-800">Items: {cartSummary.items?.length || 0}</p>
+                    <p className="text-gray-600 text-sm">
+                        Total: ₹{offerPrice ?? (cartSummary.items || []).reduce((sum, item) => sum + parseFloat(item.product?.price || 0) * item.quantity, 0).toFixed(2)}
+                    </p>
+                    {offerPrice && <p className="text-xs text-green-600 mt-1">Negotiated offer applied for product #{offerProductId}</p>}
+                </div>
                  <form onSubmit={handleCheckoutSubmit} className="space-y-6 text-left">
                      <label className="block">
                          <span className="text-gray-700 font-bold mb-2 block">Delivery Address</span>
