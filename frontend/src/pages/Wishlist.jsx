@@ -10,24 +10,23 @@ const Wishlist = () => {
     const [wishlist, setWishlist] = useState([]);
     
     useEffect(() => {
-        fetchWishlist();
-    }, []);
-
-    const fetchWishlist = async () => {
-        if (!user) return;
-        try {
-            const res = await api.get('wishlist/');
-            setWishlist(res.data.results || res.data);
-        } catch (error) {
-            toast.error("Failed to load wishlist");
-        }
-    };
+        const loadWishlist = async () => {
+            if (!user) return;
+            try {
+                const res = await api.get('wishlist/');
+                setWishlist(res.data.results || res.data);
+            } catch {
+                toast.error("Failed to load wishlist");
+            }
+        };
+        loadWishlist();
+    }, [user]);
 
     return (
         <div className="min-h-screen px-6 lg:px-20 pt-32 pb-20 bg-background">
             <div className="max-w-7xl mx-auto animate-slide-up">
                 <h2 className="text-4xl font-display font-black mb-10 text-gray-900 flex items-center gap-3 tracking-tight">
-                    <Heart className="text-pink-500 w-10 h-10 fill-pink-500 drop-shadow-md" /> Your Saved Items
+                    <Heart className="text-pink-500 w-10 h-10 drop-shadow-md" /> Your Saved Items
                 </h2>
                 {wishlist.length === 0 ? (
                     <div className="text-center py-32 px-6 bg-white glass-card rounded-3xl border border-gray-100 flex flex-col items-center justify-center shadow-sm">

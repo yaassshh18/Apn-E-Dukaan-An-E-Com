@@ -54,14 +54,14 @@ const ProductDetail = () => {
                     if (recent.length > 10) recent.pop();
                     localStorage.setItem('recentlyViewed', JSON.stringify(recent));
                 }
-            } catch (err) {
-                setLoadError(err.response?.status === 404 ? 'Product not found.' : 'Failed to load product details.');
+            } catch (error) {
+                setLoadError(error.response?.status === 404 ? 'Product not found.' : 'Failed to load product details.');
             }
 
             // Increment view should not block product rendering.
             try {
                 await api.post(`products/${id}/increment_view/`);
-            } catch (err) {
+            } catch {
                 // Ignore analytics failures for unauthenticated users.
             }
 
@@ -76,7 +76,13 @@ const ProductDetail = () => {
             await api.post('wishlist/', { product: product.id });
             toast.success('Added to Wishlist ❤️');
         } catch (error) {
-            toast.error('Already in Wishlist or failed');
+            const message = error.response?.data?.detail || error.response?.data?.error || error.response?.data?.non_field_errors?.[0] || '';
+            const isAlreadySaved = error.response?.status === 400 && message.toLowerCase().includes('already');
+            if (isAlreadySaved) {
+                toast('Already in wishlist', { icon: '💙' });
+                return;
+            }
+            toast.error('Failed to add to wishlist');
         }
     };
 
@@ -87,7 +93,7 @@ const ProductDetail = () => {
         try {
             await api.post('cart/add_item/', { product_id: product.id, quantity: 1 });
             toast.success("Added to cart");
-        } catch (error) {
+        } catch {
             toast.error("Failed to add to cart");
         }
     };
@@ -109,7 +115,7 @@ const ProductDetail = () => {
             // Refresh product to get new reviews
             const res = await api.get(`products/${id}/`);
             setProduct(res.data);
-        } catch (error) {
+        } catch {
             toast.error("Failed to submit review");
         }
     };
@@ -124,7 +130,7 @@ const ProductDetail = () => {
             toast.success("Report submitted successfully");
             setShowReportModal(false);
             setReportReason('');
-        } catch (error) {
+        } catch {
             toast.error("Failed to submit report");
         }
     };

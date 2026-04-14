@@ -7,17 +7,16 @@ const BuyerDashboard = () => {
     const [orders, setOrders] = useState([]);
 
     useEffect(() => {
-        fetchOrders();
+        const loadOrders = async () => {
+            try {
+                const res = await api.get('orders/');
+                setOrders(res.data.results || res.data);
+            } catch {
+                toast.error("Failed to load your orders");
+            }
+        };
+        loadOrders();
     }, []);
-
-    const fetchOrders = async () => {
-        try {
-            const res = await api.get('orders/');
-            setOrders(res.data.results || res.data);
-        } catch (error) {
-            toast.error("Failed to load your orders");
-        }
-    };
 
     return (
         <div className="container mx-auto px-6 py-12 max-w-5xl">

@@ -1,7 +1,7 @@
 import { useState, useContext } from 'react';
 import { Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import { ShoppingBag, ShoppingCart, User, LogOut, MessageSquare, Menu, X } from 'lucide-react';
+import { ShoppingBag, ShoppingCart, User, LogOut, MessageSquare, Menu, X, Heart } from 'lucide-react';
 import NotificationBell from './NotificationBell';
 
 const Navbar = () => {
@@ -28,9 +28,14 @@ const Navbar = () => {
                         </Link>
                         <NotificationBell />
                         {user.role === 'BUYER' && (
-                            <Link to="/cart" className="text-gray-600 hover:text-primary transition-colors flex items-center gap-2 font-semibold relative">
-                                <ShoppingCart className="w-5 h-5" />
-                            </Link>
+                            <>
+                                <Link to="/wishlist" className="text-gray-600 hover:text-pink-500 transition-colors flex items-center gap-2 font-semibold relative">
+                                    <Heart className="w-5 h-5" />
+                                </Link>
+                                <Link to="/cart" className="text-gray-600 hover:text-primary transition-colors flex items-center gap-2 font-semibold relative">
+                                    <ShoppingCart className="w-5 h-5" />
+                                </Link>
+                            </>
                         )}
                         <div className="h-6 w-px bg-gray-200 mx-2"></div>
                         <Link to={user.role === 'SELLER' ? "/seller-dashboard" : user.role === 'ADMIN' ? "/admin-dashboard" : "/buyer-dashboard"} className="flex items-center gap-3 hover:bg-gray-50 p-1.5 pr-4 rounded-full border border-transparent hover:border-gray-200 transition-all">
@@ -70,9 +75,14 @@ const Navbar = () => {
                                 <NotificationBell />
                             </div>
                             {user.role === 'BUYER' && (
-                                <Link onClick={() => setIsMobileMenuOpen(false)} to="/cart" className="text-gray-800 hover:text-primary transition-colors flex items-center gap-2 font-medium p-2 bg-gray-50 rounded-lg">
-                                    <ShoppingCart className="w-6 h-6" /> View Cart
-                                </Link>
+                                <>
+                                    <Link onClick={() => setIsMobileMenuOpen(false)} to="/wishlist" className="text-gray-800 hover:text-pink-500 transition-colors flex items-center gap-2 font-medium p-2 bg-gray-50 rounded-lg">
+                                        <Heart className="w-6 h-6" /> Wishlist
+                                    </Link>
+                                    <Link onClick={() => setIsMobileMenuOpen(false)} to="/cart" className="text-gray-800 hover:text-primary transition-colors flex items-center gap-2 font-medium p-2 bg-gray-50 rounded-lg">
+                                        <ShoppingCart className="w-6 h-6" /> View Cart
+                                    </Link>
+                                </>
                             )}
                             <button onClick={() => { setIsMobileMenuOpen(false); logout(); }} className="text-red-500 hover:bg-red-50 transition-colors flex items-center gap-2 font-medium p-2 rounded-lg text-left">
                                 <LogOut className="w-6 h-6" /> Logout

@@ -50,7 +50,7 @@ const Checkout = () => {
                         toast.success("Online Payment Successful!");
                         generateInvoice(res.data.id || 'XX');
                         navigate('/buyer-dashboard');
-                    } catch (err) {
+                    } catch {
                         toast.error("Failed to confirm online order.");
                     }
                 },
@@ -73,7 +73,7 @@ const Checkout = () => {
                 toast.success("Order Placed Successfully via COD!");
                 generateInvoice(res.data.id || 'XX');
                 navigate('/buyer-dashboard');
-            } catch (error) {
+            } catch {
                 toast.error("Failed to place order.");
             }
         }

@@ -77,7 +77,7 @@ const Register = () => {
             await resendOtp(formData.email, 'registration');
             setCountdown(60);
             toast.success('Verification code resent successfully', { icon: '🔄', style: { borderRadius: '10px', background: '#1e293b', color: '#fff' } });
-        } catch (error) {
+        } catch {
             toast.error('Failed to resend code');
         }
     };

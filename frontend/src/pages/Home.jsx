@@ -6,6 +6,8 @@ import { AuthContext } from '../context/AuthContext';
 import useDebounce from '../hooks/useDebounce';
 import ProductCard from '../components/ProductCard';
 
+const BLOCKED_RECENT_TITLES = ['caprese', 'nike run defy'];
+
 const Home = () => {
     const { user } = useContext(AuthContext);
     const [products, setProducts] = useState([]);
@@ -16,74 +18,53 @@ const Home = () => {
     const debouncedSearch = useDebounce(search, 500);
     const [nearMe, setNearMe] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
-    const blockedRecentTitles = ['caprese', 'nike run defy'];
-
     useEffect(() => {
-        fetchProducts();
-        fetchTrending();
-        fetchCategories();
-        
-        const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-        const cleanedRecent = recent.filter(
-            (item) => item?.title && !blockedRecentTitles.some((blocked) => item.title.toLowerCase().includes(blocked))
-        );
-        localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
-        setRecentProducts(cleanedRecent);
-    }, [debouncedSearch, nearMe, selectedCategory]);
-
-    const fetchCategories = async () => {
-        try {
-            const res = await api.get('categories/');
-            setCategories(res.data.results || res.data);
-        } catch (error) {
-            console.error("Failed to load categories")
-        }
-    };
-
-    const fetchTrending = async () => {
-        try {
-            const res = await api.get('products/?sort=trending');
-            const data = res.data.results || res.data;
-            setTrendingProducts(data.slice(0, 4));
-        } catch (error) {
-            console.error("Failed to load trending");
-        }
-    };
-
-    const fetchProducts = async () => {
-        try {
-            let url = `products/?search=${debouncedSearch}`;
-            if (nearMe && user && user.location) {
-                url += `&location=${user.location}`;
+        const loadHomeData = async () => {
+            try {
+                const categoryRes = await api.get('categories/');
+                setCategories(categoryRes.data.results || categoryRes.data);
+            } catch {
+                console.error("Failed to load categories");
             }
-            if (selectedCategory) {
-                url += `&category=${selectedCategory}`;
+
+            try {
+                const trendingRes = await api.get('products/?sort=trending');
+                const trendingData = trendingRes.data.results || trendingRes.data;
+                setTrendingProducts(trendingData.slice(0, 4));
+            } catch {
+                console.error("Failed to load trending");
             }
-            const res = await api.get(url);
-            // DRF Pagination returns the array inside "results"
-            if (res.data && res.data.results) {
-                setProducts(res.data.results);
-                const allowedIds = new Set(res.data.results.map((p) => p.id));
+
+            try {
+                let url = `products/?search=${debouncedSearch}`;
+                if (nearMe && user && user.location) {
+                    url += `&location=${user.location}`;
+                }
+                if (selectedCategory) {
+                    url += `&category=${selectedCategory}`;
+                }
+
+                const res = await api.get(url);
+                const currentProducts = res.data?.results || res.data || [];
+                setProducts(currentProducts);
+
+                const allowedIds = new Set(currentProducts.map((p) => p.id));
                 const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
                 const cleanedRecent = recent.filter(
-                    (item) => allowedIds.has(item.id) && item?.title && !blockedRecentTitles.some((blocked) => item.title.toLowerCase().includes(blocked))
+                    (item) =>
+                        allowedIds.has(item.id) &&
+                        item?.title &&
+                        !BLOCKED_RECENT_TITLES.some((blocked) => item.title.toLowerCase().includes(blocked))
                 );
                 localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
                 setRecentProducts(cleanedRecent);
-            } else {
-                setProducts(res.data);
-                const allowedIds = new Set((res.data || []).map((p) => p.id));
-                const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-                const cleanedRecent = recent.filter(
-                    (item) => allowedIds.has(item.id) && item?.title && !blockedRecentTitles.some((blocked) => item.title.toLowerCase().includes(blocked))
-                );
-                localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
-                setRecentProducts(cleanedRecent);
+            } catch (error) {
+                console.error(error);
             }
-        } catch (error) {
-            console.error(error);
-        }
-    };
+        };
+
+        loadHomeData();
+    }, [debouncedSearch, nearMe, selectedCategory, user]);
 
     return (
         <div className="min-h-screen">

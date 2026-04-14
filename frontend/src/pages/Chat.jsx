@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, useRef } from 'react';
+import { useState, useEffect, useContext, useRef, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
@@ -13,7 +13,7 @@ const Chat = () => {
     // We expect state to pass receiver_id and possibly product_id
     const state = location.state || {};
     const [receiverId, setReceiverId] = useState(state.receiver_id || null);
-    const [productId, setProductId] = useState(state.product_id || null);
+    const [productId] = useState(state.product_id || null);
     
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
@@ -21,31 +21,42 @@ const Chat = () => {
     const [offerAmount, setOfferAmount] = useState('');
     const messagesEndRef = useRef(null);
 
-    useEffect(() => {
-        if (!user) {
-            navigate('/login');
-            return;
-        }
-        fetchMessages();
-        // In a real app we'd use WebSockets for real-time, here we poll every 5s
-        const intervalId = setInterval(fetchMessages, 5000);
-        return () => clearInterval(intervalId);
-    }, [receiverId]);
+    const scrollToBottom = useCallback(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, []);
 
-    const fetchMessages = async () => {
+    const fetchMessages = useCallback(async () => {
         try {
             const url = receiverId ? `chat/?user_id=${receiverId}` : `chat/`;
             const res = await api.get(url);
             setMessages(res.data.results || res.data);
             scrollToBottom();
-        } catch (error) {
-            console.error("Failed to load messages", error);
+        } catch {
+            console.error("Failed to load messages");
         }
-    };
+    }, [receiverId, scrollToBottom]);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
+    useEffect(() => {
+        if (!user) {
+            navigate('/login');
+            return;
+        }
+        const loadMessages = async () => {
+            try {
+                const url = receiverId ? `chat/?user_id=${receiverId}` : `chat/`;
+                const res = await api.get(url);
+                setMessages(res.data.results || res.data);
+                scrollToBottom();
+            } catch {
+                console.error("Failed to load messages");
+            }
+        };
+
+        loadMessages();
+        // In a real app we'd use WebSockets for real-time, here we poll every 5s
+        const intervalId = setInterval(loadMessages, 5000);
+        return () => clearInterval(intervalId);
+    }, [receiverId, scrollToBottom, user, navigate]);
 
     const handleSendMessage = async (e) => {
         e.preventDefault();
@@ -63,7 +74,7 @@ const Chat = () => {
             setOfferAmount('');
             setIsOffer(false);
             fetchMessages();
-        } catch (error) {
+        } catch {
             toast.error("Failed to send message");
         }
     };
@@ -73,7 +84,7 @@ const Chat = () => {
             await api.patch(`chat/${msgId}/`, { offer_status: status });
             fetchMessages();
             toast.success(`Offer ${status}!`);
-        } catch (error) {
+        } catch {
             toast.error("Failed to update offer");
         }
     };

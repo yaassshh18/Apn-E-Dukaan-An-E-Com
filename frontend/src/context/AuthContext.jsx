@@ -1,6 +1,6 @@
-import { createContext, useState, useEffect } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
-import { jwtDecode } from 'jwt-decode';
 
 export const AuthContext = createContext();
 
@@ -8,31 +8,33 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-            try {
-                const decoded = jwtDecode(token);
-                // In a real app we'd fetch the profile to get the full role, but here we can decode or fetch profile.
-                fetchProfile();
-            } catch (e) {
-                logout();
-            }
-        } else {
-            setLoading(false);
-        }
+    const logout = useCallback(() => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        sessionStorage.removeItem('access_token');
+        sessionStorage.removeItem('refresh_token');
+        setUser(null);
     }, []);
 
-    const fetchProfile = async () => {
+    const fetchProfile = useCallback(async () => {
         try {
             const res = await api.get('auth/profile/');
             setUser(res.data);
-        } catch (error) {
+        } catch {
             logout();
         } finally {
             setLoading(false);
         }
-    };
+    }, [logout]);
+
+    useEffect(() => {
+        const token = localStorage.getItem('access_token') || sessionStorage.getItem('access_token');
+        if (token) {
+            fetchProfile();
+        } else {
+            setLoading(false);
+        }
+    }, [fetchProfile]);
 
     // Step 1: Request 2FA OTP
     const initiateLogin = async (username, email, password) => {
@@ -41,10 +43,19 @@ export const AuthProvider = ({ children }) => {
     };
 
     // Step 2: Verify 2FA OTP and actually log in
-    const verifyLogin = async (email, otp_code) => {
+    const verifyLogin = async (email, otp_code, rememberMe = true) => {
         const res = await api.post('auth/login/otp/verify/', { email, otp_code });
-        localStorage.setItem('access_token', res.data.access);
-        localStorage.setItem('refresh_token', res.data.refresh);
+        if (rememberMe) {
+            localStorage.setItem('access_token', res.data.access);
+            localStorage.setItem('refresh_token', res.data.refresh);
+            sessionStorage.removeItem('access_token');
+            sessionStorage.removeItem('refresh_token');
+        } else {
+            sessionStorage.setItem('access_token', res.data.access);
+            sessionStorage.setItem('refresh_token', res.data.refresh);
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+        }
         await fetchProfile();
         return res.data.user;
     };
@@ -60,12 +71,6 @@ export const AuthProvider = ({ children }) => {
 
     const resendOtp = async (email, action = 'login') => {
         await api.post('auth/resend-otp/', { email, action });
-    };
-
-    const logout = () => {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        setUser(null);
     };
 
     return (

@@ -18,10 +18,6 @@ const SellerDashboard = () => {
     const [categoryId, setCategoryId] = useState('');
     const [image, setImage] = useState(null);
 
-    useEffect(() => {
-        fetchData();
-    }, []);
-
     const fetchData = async () => {
         try {
             const prodRes = await api.get('products/');
@@ -32,11 +28,28 @@ const SellerDashboard = () => {
             
             const catRes = await api.get('categories/');
             setCategories(catRes.data.results || catRes.data);
-        } catch (error) {
-            console.error(error);
+        } catch {
             toast.error("Failed to load dashboard data");
         }
     };
+
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                const prodRes = await api.get('products/');
+                setProducts(prodRes.data.results || prodRes.data);
+                
+                const orderRes = await api.get('orders/');
+                setOrders(orderRes.data.results || orderRes.data);
+                
+                const catRes = await api.get('categories/');
+                setCategories(catRes.data.results || catRes.data);
+            } catch {
+                toast.error("Failed to load dashboard data");
+            }
+        };
+        loadData();
+    }, []);
 
     const handleAddProduct = async (e) => {
         e.preventDefault();
@@ -56,7 +69,7 @@ const SellerDashboard = () => {
             setIsAddingProduct(false);
             setTitle(''); setDescription(''); setPrice(''); setStock('1'); setImage(null);
             fetchData();
-        } catch (err) {
+        } catch {
             toast.error("Failed to add product");
         }
     };
@@ -66,7 +79,7 @@ const SellerDashboard = () => {
             await api.patch(`orders/${orderId}/update_status/`, { status: newStatus });
             toast.success("Order status dynamically updated!");
             fetchData();
-        } catch (error) {
+        } catch {
             toast.error("Unable to modify order status");
         }
     };

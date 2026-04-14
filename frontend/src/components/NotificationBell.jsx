@@ -11,7 +11,7 @@ const NotificationBell = () => {
             try {
                 const res = await api.get('/api/notifications/');
                 setNotifications(res.data);
-            } catch (error) {
+            } catch {
                 console.error("Failed to fetch notifications");
             }
         };
@@ -24,7 +24,7 @@ const NotificationBell = () => {
         try {
             await api.patch(`/api/notifications/${id}/`, { is_read: true });
             setNotifications(notifications.map(n => n.id === id ? { ...n, is_read: true } : n));
-        } catch (error) {
+        } catch {
             console.error("Failed to mark as read");
         }
     };

@@ -18,7 +18,13 @@ const ProductCard = ({ product }) => {
             await api.post('wishlist/', { product: product.id });
             toast.success('Added to Wishlist ❤️');
         } catch (error) {
-            toast.error('Already in Wishlist or failed');
+            const message = error.response?.data?.detail || error.response?.data?.error || error.response?.data?.non_field_errors?.[0] || '';
+            const isAlreadySaved = error.response?.status === 400 && message.toLowerCase().includes('already');
+            if (isAlreadySaved) {
+                toast('Already in wishlist', { icon: '💙' });
+                return;
+            }
+            toast.error('Failed to add to wishlist');
         }
     };
 

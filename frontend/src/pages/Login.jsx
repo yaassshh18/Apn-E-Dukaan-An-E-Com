@@ -10,6 +10,7 @@ const Login = () => {
     const [loginEmail, setLoginEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
+    const [rememberMe, setRememberMe] = useState(true);
 
     // 2FA State
     const [is2FAStarted, setIs2FAStarted] = useState(false);
@@ -45,7 +46,7 @@ const Login = () => {
         e.preventDefault();
         if(otpCode.length < 6) return;
         try {
-            await verifyLogin(userEmail, otpCode);
+            await verifyLogin(userEmail, otpCode, rememberMe);
             toast.success('Welcome back!');
             navigate('/');
         } catch (error) {
@@ -59,7 +60,7 @@ const Login = () => {
             await resendOtp(userEmail, 'login');
             setCountdown(60);
             toast.success('Verification code resent successfully', { icon: '🔄', style: { borderRadius: '10px', background: '#1e293b', color: '#fff' } });
-        } catch (error) {
+        } catch {
             toast.error('Failed to resend code');
         }
     };
@@ -225,7 +226,12 @@ const Login = () => {
 
                         <div className="flex items-center justify-between text-sm">
                             <label className="flex items-center gap-2 cursor-pointer group">
-                                <input type="checkbox" className="w-4 h-4 rounded text-primary focus:ring-primary border-gray-300 transition-all cursor-pointer"/>
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="w-4 h-4 rounded text-primary focus:ring-primary border-gray-300 transition-all cursor-pointer"
+                                />
                                 <span className="text-gray-600 group-hover:text-primary transition-colors">Remember me</span>
                             </label>
                             <Link to="/forgot-password" className="font-semibold text-secondary hover:text-primary transition-colors hover:underline">Forgot Password?</Link>

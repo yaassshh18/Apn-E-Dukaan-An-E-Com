@@ -19,7 +19,7 @@ const SellerProfile = () => {
                 
                 const productsRes = await api.get(`products/?seller=${id}`);
                 setProducts(productsRes.data.results || productsRes.data);
-            } catch (error) {
+            } catch {
                 console.error("Failed to fetch seller data");
             } finally {
                 setLoading(false);

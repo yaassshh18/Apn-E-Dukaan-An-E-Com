@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { Shield, Users, ShoppingBag, TrendingUp, Trash2 } from 'lucide-react';
+import { Shield, ShoppingBag, TrendingUp, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const AdminDashboard = () => {
     const [stats, setStats] = useState({ products: [], orders: [] });
-
-    useEffect(() => {
-        fetchAdminData();
-    }, []);
 
     const fetchAdminData = async () => {
         try {
@@ -19,10 +15,26 @@ const AdminDashboard = () => {
                 products: prodRes.data.results || prodRes.data,
                 orders: orderRes.data.results || orderRes.data,
             });
-        } catch (error) {
+        } catch {
             toast.error("Failed to load global admin data.");
         }
     };
+
+    useEffect(() => {
+        const loadAdminData = async () => {
+            try {
+                const prodRes = await api.get('products/');
+                const orderRes = await api.get('orders/');
+                setStats({
+                    products: prodRes.data.results || prodRes.data,
+                    orders: orderRes.data.results || orderRes.data,
+                });
+            } catch {
+                toast.error("Failed to load global admin data.");
+            }
+        };
+        loadAdminData();
+    }, []);
 
     const handleDeleteProduct = async (id) => {
         if (!window.confirm("Are you sure you want to forcibly remove this product from the marketplace?")) return;
@@ -30,7 +42,7 @@ const AdminDashboard = () => {
             await api.delete(`products/${id}/`);
             toast.success("Product deleted successfully by system admin");
             fetchAdminData();
-        } catch (error) {
+        } catch {
             toast.error("Failed to delete product");
         }
     };

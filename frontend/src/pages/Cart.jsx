@@ -9,10 +9,6 @@ const Cart = () => {
     const navigate = useNavigate();
     const backendOrigin = (api.defaults.baseURL || '').replace(/\/api\/?$/, '');
 
-    useEffect(() => {
-        fetchCart();
-    }, []);
-
     const fetchCart = async () => {
         try {
             const res = await api.get('cart/');
@@ -27,19 +23,36 @@ const Cart = () => {
         }
     };
 
+    useEffect(() => {
+        const loadCart = async () => {
+            try {
+                const res = await api.get('cart/');
+                const payload = res.data?.results
+                    ? res.data.results[0]
+                    : Array.isArray(res.data)
+                        ? res.data[0]
+                        : res.data;
+                setCart(payload || { items: [] });
+            } catch (error) {
+                console.error("Cart fetch error", error);
+            }
+        };
+        loadCart();
+    }, []);
+
     const handleRemove = async (productId) => {
         try {
             await api.delete('cart/remove_item/', { data: { product_id: productId } });
             fetchCart();
             toast.success("Item removed");
-        } catch (error) {
+        } catch {
             toast.error("Failed to remove item");
         }
     };
     
     const handleCheckout = () => {
         navigate('/checkout');
-    }
+    };
 
     const total = cart.items?.reduce((acc, item) => acc + (parseFloat(item.product?.price || 0) * item.quantity), 0) || 0;
     const getImageUrl = (image) => {
