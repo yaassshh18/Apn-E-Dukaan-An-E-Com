@@ -20,6 +20,18 @@ const ProductDetail = () => {
     const avgRating = product?.reviews?.length
         ? (product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length).toFixed(1)
         : '4.0';
+    const rawDescription = product?.description || '';
+    const hasKeyFeatures = rawDescription.includes('Key Features:');
+    const descriptionIntro = hasKeyFeatures
+        ? rawDescription.split('Key Features:')[0].trim()
+        : rawDescription.trim();
+    const keyFeatures = hasKeyFeatures
+        ? rawDescription
+            .split('Key Features:')[1]
+            .split('\n')
+            .map((line) => line.replace(/^-+\s*/, '').trim())
+            .filter(Boolean)
+        : [];
 
     useEffect(() => {
         const fetchProduct = async () => {
@@ -167,9 +179,24 @@ const ProductDetail = () => {
                                 <span className="ml-2 mb-1 bg-green-50 text-green-600 px-3 py-1 rounded-full text-xs uppercase tracking-wide font-extrabold border border-green-100">In Stock</span>
                             )}
                         </div>
-                        <p className="text-gray-500 mb-10 text-lg leading-relaxed font-light">
-                            {product.description || "Experience local quality with this premium item. Connect directly with the seller to discover more about its origins and condition before making it yours."}
-                        </p>
+                        <div className="mb-10 rounded-2xl border border-gray-100 bg-white/80 p-5 shadow-sm">
+                            <p className="text-gray-600 text-base leading-relaxed">
+                                {descriptionIntro || "Experience local quality with this premium item. Connect directly with the seller to discover more about its origins and condition before making it yours."}
+                            </p>
+                            {keyFeatures.length > 0 && (
+                                <div className="mt-4 pt-4 border-t border-gray-100">
+                                    <h3 className="text-sm font-semibold tracking-wide uppercase text-gray-500 mb-2">Key Features</h3>
+                                    <ul className="space-y-1.5">
+                                        {keyFeatures.map((feature, index) => (
+                                            <li key={`feature-${index}`} className="text-sm text-gray-700 flex items-start gap-2">
+                                                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-secondary shrink-0"></span>
+                                                <span>{feature}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
                         
                         <Link to={`/seller/${product.seller.id}`} className="group p-4 bg-white hover:bg-gray-50 border border-gray-100 transition-all rounded-2xl mb-10 flex items-center gap-4 cursor-pointer shadow-sm hover:shadow-md">
                             <div className="w-14 h-14 bg-gradient-to-br from-secondary to-primary rounded-full flex items-center justify-center text-white font-bold text-xl uppercase shadow-inner">

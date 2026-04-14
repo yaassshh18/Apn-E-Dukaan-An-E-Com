@@ -16,6 +16,7 @@ const Home = () => {
     const debouncedSearch = useDebounce(search, 500);
     const [nearMe, setNearMe] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState(null);
+    const blockedRecentTitles = ['caprese', 'nike run defy'];
 
     useEffect(() => {
         fetchProducts();
@@ -24,7 +25,7 @@ const Home = () => {
         
         const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
         const cleanedRecent = recent.filter(
-            (item) => item?.title && !item.title.toLowerCase().includes('caprese')
+            (item) => item?.title && !blockedRecentTitles.some((blocked) => item.title.toLowerCase().includes(blocked))
         );
         localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
         setRecentProducts(cleanedRecent);
@@ -65,7 +66,7 @@ const Home = () => {
                 const allowedIds = new Set(res.data.results.map((p) => p.id));
                 const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
                 const cleanedRecent = recent.filter(
-                    (item) => allowedIds.has(item.id) && item?.title && !item.title.toLowerCase().includes('caprese')
+                    (item) => allowedIds.has(item.id) && item?.title && !blockedRecentTitles.some((blocked) => item.title.toLowerCase().includes(blocked))
                 );
                 localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
                 setRecentProducts(cleanedRecent);
@@ -74,7 +75,7 @@ const Home = () => {
                 const allowedIds = new Set((res.data || []).map((p) => p.id));
                 const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
                 const cleanedRecent = recent.filter(
-                    (item) => allowedIds.has(item.id) && item?.title && !item.title.toLowerCase().includes('caprese')
+                    (item) => allowedIds.has(item.id) && item?.title && !blockedRecentTitles.some((blocked) => item.title.toLowerCase().includes(blocked))
                 );
                 localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
                 setRecentProducts(cleanedRecent);
