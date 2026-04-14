@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 const ProductCard = ({ product }) => {
     const { user } = useContext(AuthContext);
     const navigate = useNavigate();
+    const ratings = product.reviews?.map((r) => r.rating) || [];
+    const avgRating = ratings.length ? (ratings.reduce((a, b) => a + b, 0) / ratings.length).toFixed(1) : '4.0';
 
     const handleWishlist = async (e) => {
         e.preventDefault();
@@ -58,7 +60,7 @@ const ProductCard = ({ product }) => {
                 <div className="flex justify-between items-start mb-2">
                     <h3 className="font-display font-bold text-lg text-gray-900 line-clamp-1">{product.title}</h3>
                     <div className="flex items-center gap-1 bg-green-50 px-2 py-0.5 rounded-md text-xs font-bold text-green-700">
-                        ⭐ 4.8
+                        ⭐ {avgRating}
                     </div>
                 </div>
                 <p className="text-sm text-gray-500 mb-4 flex items-center gap-1">

@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api/axios';
 import { AuthContext } from '../context/AuthContext';
 import { ShoppingCart, MessageCircle, Star, User, Heart } from 'lucide-react';
@@ -15,9 +15,16 @@ const ProductDetail = () => {
     const [rating, setRating] = useState(5);
     const [showReportModal, setShowReportModal] = useState(false);
     const [reportReason, setReportReason] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
+    const avgRating = product?.reviews?.length
+        ? (product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length).toFixed(1)
+        : '4.0';
 
     useEffect(() => {
         const fetchProduct = async () => {
+            setLoading(true);
+            setLoadError('');
             try {
                 const res = await api.get(`products/${id}/`);
                 setProduct(res.data);
@@ -35,12 +42,18 @@ const ProductDetail = () => {
                     if (recent.length > 10) recent.pop();
                     localStorage.setItem('recentlyViewed', JSON.stringify(recent));
                 }
+            } catch (err) {
+                setLoadError(err.response?.status === 404 ? 'Product not found.' : 'Failed to load product details.');
+            }
 
-                // Increment view
+            // Increment view should not block product rendering.
+            try {
                 await api.post(`products/${id}/increment_view/`);
             } catch (err) {
-                toast.error("Failed to load product details");
+                // Ignore analytics failures for unauthenticated users.
             }
+
+            setLoading(false);
         };
         fetchProduct();
     }, [id]);
@@ -104,9 +117,22 @@ const ProductDetail = () => {
         }
     };
 
-    if (!product) return <div className="min-h-screen pt-32 text-center text-xl">Loading amazing local product...</div>;
+    if (loading) return <div className="min-h-screen pt-32 text-center text-xl">Loading amazing local product...</div>;
+    if (loadError) {
+        return (
+            <div className="min-h-screen pt-28 px-6">
+                <div className="max-w-xl mx-auto glass-card p-8 text-center">
+                    <h2 className="text-2xl font-display font-bold text-gray-900 mb-2">{loadError}</h2>
+                    <p className="text-gray-500 mb-6">Please browse products and try opening an available item.</p>
+                    <Link to="/" className="btn-primary inline-flex px-6 py-3">Go to Home</Link>
+                </div>
+            </div>
+        );
+    }
+    if (!product) return null;
 
 
+    return (
         <div className="min-h-screen bg-background pt-32 pb-20 px-6">
             <div className="max-w-7xl mx-auto">
                 <div className="glass-card p-6 md:p-12 mb-12 flex flex-col md:flex-row gap-12 lg:gap-16 border-white/80 shadow-soft animate-slide-up">
@@ -126,7 +152,7 @@ const ProductDetail = () => {
                     <div className="w-full md:w-1/2 flex flex-col justify-center">
                         <div className="inline-flex items-center gap-2 mb-4 px-3 py-1 bg-green-50 text-green-700 rounded-full w-max text-sm font-bold border border-green-100">
                             <Star className="w-4 h-4 fill-current" />
-                            <span>4.8</span>
+                            <span>{avgRating}</span>
                             <span className="text-green-600/70 ml-1 font-medium">(Verified)</span>
                         </div>
                         <h1 className="text-4xl lg:text-5xl font-display font-extrabold text-gray-900 mb-4 leading-tight tracking-tight">{product.title}</h1>
@@ -284,6 +310,7 @@ const ProductDetail = () => {
             )}
             </div>
         </div>
+    );
 };
 
 export default ProductDetail;

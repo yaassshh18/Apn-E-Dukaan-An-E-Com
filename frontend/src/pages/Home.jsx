@@ -23,7 +23,11 @@ const Home = () => {
         fetchCategories();
         
         const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
-        setRecentProducts(recent);
+        const cleanedRecent = recent.filter(
+            (item) => item?.title && !item.title.toLowerCase().includes('caprese')
+        );
+        localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
+        setRecentProducts(cleanedRecent);
     }, [debouncedSearch, nearMe, selectedCategory]);
 
     const fetchCategories = async () => {
@@ -58,8 +62,22 @@ const Home = () => {
             // DRF Pagination returns the array inside "results"
             if (res.data && res.data.results) {
                 setProducts(res.data.results);
+                const allowedIds = new Set(res.data.results.map((p) => p.id));
+                const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+                const cleanedRecent = recent.filter(
+                    (item) => allowedIds.has(item.id) && item?.title && !item.title.toLowerCase().includes('caprese')
+                );
+                localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
+                setRecentProducts(cleanedRecent);
             } else {
                 setProducts(res.data);
+                const allowedIds = new Set((res.data || []).map((p) => p.id));
+                const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
+                const cleanedRecent = recent.filter(
+                    (item) => allowedIds.has(item.id) && item?.title && !item.title.toLowerCase().includes('caprese')
+                );
+                localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
+                setRecentProducts(cleanedRecent);
             }
         } catch (error) {
             console.error(error);
