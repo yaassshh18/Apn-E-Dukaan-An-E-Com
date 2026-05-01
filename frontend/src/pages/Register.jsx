@@ -46,8 +46,11 @@ const Register = () => {
     const handleRegisterSubmit = async (e) => {
         e.preventDefault();
         try {
-            await register(formData);
+            const regData = await register(formData);
             toast.success('Registration successful! Please verify your email.', { icon: '📧', style: { borderRadius: '10px', background: '#1e293b', color: '#fff' } });
+            if (regData?.dev_otp) {
+                toast.success(`Development mode: OTP is ${regData.dev_otp}`, { duration: 25000, icon: '🔑' });
+            }
             setIsVerificationStarted(true);
             setCountdown(60);
         } catch (error) {
@@ -66,9 +69,12 @@ const Register = () => {
         e.preventDefault();
         if(otpCode.length < 6) return;
         try {
-            await verifyRegistration(formData.email, otpCode);
-            toast.success('Account verified successfully! You can now log in.');
-            navigate('/login');
+            const verifyData = await verifyRegistration(formData.email, otpCode, true);
+            const role = verifyData.user?.role;
+            const nextPath =
+                role === 'SELLER' ? '/seller-dashboard' : role === 'ADMIN' ? '/admin-dashboard' : '/buyer-dashboard';
+            toast.success('Welcome! Your account is ready.');
+            navigate(nextPath);
         } catch (error) {
             toast.error(error.response?.data?.error || 'Invalid Verification Code');
         }
@@ -77,9 +83,12 @@ const Register = () => {
     const handleResend = async () => {
         if(countdown > 0) return;
         try {
-            await resendOtp(formData.email, 'registration');
+            const resendData = await resendOtp(formData.email, 'registration');
             setCountdown(60);
             toast.success('Verification code resent successfully', { icon: '🔄', style: { borderRadius: '10px', background: '#1e293b', color: '#fff' } });
+            if (resendData?.dev_otp) {
+                toast.success(`Development mode: OTP is ${resendData.dev_otp}`, { duration: 25000, icon: '🔑' });
+            }
         } catch {
             toast.error('Failed to resend code');
         }

@@ -1,13 +1,12 @@
 import { useState, useContext, useEffect } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, ShoppingBag } from 'lucide-react';
 
 const Login = () => {
     const { user, initiateLogin, verifyLogin, resendOtp, logout } = useContext(AuthContext);
-    const [loginUsername, setLoginUsername] = useState('');
-    const [loginEmail, setLoginEmail] = useState('');
+    const [emailOrUsername, setEmailOrUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
@@ -19,7 +18,9 @@ const Login = () => {
     const [countdown, setCountdown] = useState(60);
 
     const navigate = useNavigate();
-    const dashboardPath = user?.role === 'SELLER' ? '/seller-dashboard' : user?.role === 'ADMIN' ? '/admin-dashboard' : '/buyer-dashboard';
+    const location = useLocation();
+
+    // Auto-redirect removed to avoid race conditions with window.location.href
 
     // Timer logic for resend Code
     useEffect(() => {
@@ -33,11 +34,14 @@ const Login = () => {
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
         try {
-            const data = await initiateLogin(loginUsername, loginEmail, password);
+            const data = await initiateLogin(emailOrUsername, password);
             setUserEmail(data.email);
             setIs2FAStarted(true);
             setCountdown(60);
             toast.success('Check your email. Verification code sent!', { icon: '📧', style: { borderRadius: '10px', background: '#1e293b', color: '#fff' } });
+            if (data.dev_otp) {
+                toast.success(`Development mode: OTP is ${data.dev_otp}`, { duration: 25000, icon: '🔑' });
+            }
         } catch (error) {
             toast.error(error.response?.data?.error || 'Invalid credentials');
         }
@@ -47,9 +51,10 @@ const Login = () => {
         e.preventDefault();
         if(otpCode.length < 6) return;
         try {
-            await verifyLogin(userEmail, otpCode, rememberMe);
+            const loggedInUser = await verifyLogin(userEmail, otpCode, rememberMe);
             toast.success('Welcome back!');
-            navigate('/');
+            const targetPath = loggedInUser?.role === 'SELLER' ? '/seller-dashboard' : loggedInUser?.role === 'ADMIN' ? '/admin-dashboard' : '/';
+            window.location.href = targetPath;
         } catch (error) {
             toast.error(error.response?.data?.error || 'Invalid OTP Code');
         }
@@ -58,9 +63,12 @@ const Login = () => {
     const handleResend = async () => {
         if(countdown > 0) return;
         try {
-            await resendOtp(userEmail, 'login');
+            const resendData = await resendOtp(userEmail, 'login');
             setCountdown(60);
             toast.success('Verification code resent successfully', { icon: '🔄', style: { borderRadius: '10px', background: '#1e293b', color: '#fff' } });
+            if (resendData?.dev_otp) {
+                toast.success(`Development mode: OTP is ${resendData.dev_otp}`, { duration: 25000, icon: '🔑' });
+            }
         } catch {
             toast.error('Failed to resend code');
         }
@@ -79,7 +87,7 @@ const Login = () => {
                         </div>
                         <h1 className="text-3xl md:text-4xl font-display font-medium text-white mb-4 tracking-tight leading-tight">Sign in to your workspace</h1>
                         <p className="text-gray-400 text-sm md:text-base leading-relaxed">
-                            Sign in with your username, email, and password, followed by an email verification code.
+                            Sign in with your username or email and password, followed by an email verification code.
                         </p>
                     </div>
                     
@@ -179,51 +187,17 @@ const Login = () => {
                         <p className="text-gray-500 text-lg">Login to explore exclusive local deals.</p>
                     </div>
 
-                    {user && (
-                        <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                            <p className="text-sm font-semibold text-amber-900">
-                                You are logged in as {user.username} ({user.role}). Logout to continue with another account.
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-2">
-                                <button
-                                    type="button"
-                                    onClick={() => navigate(dashboardPath)}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-amber-300 text-amber-900 hover:bg-amber-100"
-                                >
-                                    Continue as current user
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={logout}
-                                    className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-black"
-                                >
-                                    Switch account (Logout)
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {/* Form starts here */}
                     
                     <form onSubmit={handleLoginSubmit} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Username</label>
-                            <input
-                                type="text"
-                                className="input-field shadow-sm hover:shadow-md"
-                                placeholder="Enter your username"
-                                value={loginUsername}
-                                onChange={(e) => setLoginUsername(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-2">Email Address</label>
+                            <label className="block text-sm font-semibold text-gray-700 mb-2">Email or Username</label>
                             <input 
-                                type="email" 
+                                type="text" 
                                 className="input-field shadow-sm hover:shadow-md" 
-                                placeholder="Enter your email"
-                                value={loginEmail}
-                                onChange={(e) => setLoginEmail(e.target.value)}
+                                placeholder="Enter your email or username"
+                                value={emailOrUsername}
+                                onChange={(e) => setEmailOrUsername(e.target.value)}
                                 required
                             />
                         </div>
@@ -263,7 +237,7 @@ const Login = () => {
                         </div>
 
                         <button type="submit" className="btn-primary w-full text-lg py-4 mt-2 shadow-glow hover:shadow-primary/50">
-                            Continue to 2FA
+                            Continue
                         </button>
                     </form>
                     

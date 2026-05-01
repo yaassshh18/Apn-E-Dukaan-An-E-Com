@@ -20,7 +20,7 @@ const Footer = () => {
                     <h4 className="font-bold text-gray-800 mb-4">Help</h4>
                     <ul className="space-y-2 text-sm text-gray-500">
                         <li><Link to="/login" className="hover:text-primary transition-colors">Seller Login</Link></li>
-                        <li><span className="hover:text-primary transition-colors cursor-not-allowed">Contact Us</span></li>
+                        <li><Link to="/contact" className="hover:text-primary transition-colors">Contact Us</Link></li>
                     </ul>
                 </div>
             </div>

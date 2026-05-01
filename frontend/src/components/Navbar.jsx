@@ -86,10 +86,12 @@ const Navbar = () => {
                     </>
                 ) : (
                     <>
-                        <Link to="/register?role=BUYER" className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 font-semibold hover:border-primary hover:text-primary transition-colors">
-                            Join as Buyer
+                        <Link to="/login" className="px-4 py-2 text-gray-700 font-semibold hover:text-primary transition-colors">
+                            Login
                         </Link>
-                        <Link to="/register?role=SELLER" className="btn-primary shadow-glow">Join as Seller</Link>
+                        <Link to="/register" className="btn-primary shadow-glow">
+                            Create Account
+                        </Link>
                     </>
                 )}
             </div>
@@ -131,11 +133,11 @@ const Navbar = () => {
                         </>
                     ) : (
                         <>
-                            <Link onClick={() => setIsMobileMenuOpen(false)} to="/register?role=BUYER" className="text-gray-800 hover:text-primary font-medium transition-colors p-2 text-center bg-gray-50 rounded-lg">
-                                Join as Buyer
+                            <Link onClick={() => setIsMobileMenuOpen(false)} to="/login" className="text-gray-800 hover:text-primary font-medium transition-colors p-2 text-center bg-gray-50 rounded-lg">
+                                Login
                             </Link>
-                            <Link onClick={() => setIsMobileMenuOpen(false)} to="/register?role=SELLER" className="btn-primary text-center">
-                                Join as Seller
+                            <Link onClick={() => setIsMobileMenuOpen(false)} to="/register" className="btn-primary text-center">
+                                Create Account
                             </Link>
                         </>
                     )}

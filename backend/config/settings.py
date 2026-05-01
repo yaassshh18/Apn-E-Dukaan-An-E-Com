@@ -22,8 +22,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from a .env file into os.environ
-load_dotenv()
+# Load backend/.env regardless of CWD. override=True so IDE/shell placeholders (e.g. dev@example.com)
+# do not silently win over the real credentials in this file.
+load_dotenv(BASE_DIR / ".env", override=True)
 
 # SECURITY WARNING: keep the secret key used in production secret!
 # Why hardcoding is dangerous: Hardcoded secrets committed to version control can be 
@@ -175,16 +176,53 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 # Email Configuration
-# Using environment variables to prevent hardcoded credentials.
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+# - If EMAIL_HOST_USER + EMAIL_HOST_PASSWORD are set, SMTP is used (real inbox), including when DEBUG=True.
+# - If they are missing and DEBUG=True, the console backend is used (OTP in runserver terminal only).
+# - Override with USE_SMTP_EMAIL=false to force console even when credentials exist.
+_has_smtp_creds = bool(os.getenv("EMAIL_HOST_USER") and os.getenv("EMAIL_HOST_PASSWORD"))
+_env_use_smtp = os.getenv("USE_SMTP_EMAIL")
+if _env_use_smtp is not None:
+    USE_SMTP_EMAIL = _env_use_smtp.lower() == "true"
+elif DEBUG:
+    USE_SMTP_EMAIL = _has_smtp_creds
+else:
+    USE_SMTP_EMAIL = True
 
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+if USE_SMTP_EMAIL:
+    EMAIL_BACKEND = os.getenv(
+        "EMAIL_BACKEND",
+        "django.core.mail.backends.smtp.EmailBackend",
+    )
+    EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+    EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True").lower() == "true"
+    EMAIL_USE_SSL = os.getenv("EMAIL_USE_SSL", "False").lower() == "true"
+    EMAIL_TIMEOUT = int(os.getenv("EMAIL_TIMEOUT", "30"))
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+    if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
+        raise Exception(
+            "SMTP email is enabled (USE_SMTP_EMAIL=true) but EMAIL_HOST_USER / "
+            "EMAIL_HOST_PASSWORD are not set."
+        )
+    DEFAULT_FROM_EMAIL = os.getenv(
+        "DEFAULT_FROM_EMAIL",
+        f"Apn-E-Dukaan <{EMAIL_HOST_USER}>",
+    )
+else:
+    EMAIL_BACKEND = os.getenv(
+        "EMAIL_BACKEND",
+        "django.core.mail.backends.console.EmailBackend",
+    )
+    EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "noreply@localhost")
+    EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+    DEFAULT_FROM_EMAIL = os.getenv(
+        "DEFAULT_FROM_EMAIL",
+        f"Apn-E-Dukaan <{EMAIL_HOST_USER}>",
+    )
 
-if not EMAIL_HOST_USER or not EMAIL_HOST_PASSWORD:
-    # We raise an error to ensure the application won't launch silently without required credentials,
-    # preventing email-related failures downstream.
-    raise Exception("Email credentials not set in environment variables")
+# Include OTP in JSON responses (Register/Login/Resend) when console email is active or explicitly enabled.
+_env_expose_otp = os.getenv("EXPOSE_OTP_IN_API", "").lower() in ("1", "true", "yes")
+EXPOSE_OTP_IN_API = _env_expose_otp or (DEBUG and not USE_SMTP_EMAIL)
+
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

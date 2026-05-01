@@ -23,10 +23,11 @@ const Chat = lazy(() => import('./pages/Chat'));
 const Wishlist = lazy(() => import('./pages/Wishlist'));
 const SellerProfile = lazy(() => import('./pages/SellerProfile'));
 const Legal = lazy(() => import('./pages/Legal'));
+const Contact = lazy(() => import('./pages/Contact'));
 const ProfileSettings = lazy(() => import('./pages/ProfileSettings'));
 import Footer from './components/Footer';
 
-const RoleProtectedRoute = ({ user, allowedRole, redirectTo = '/' , children }) => {
+const RoleProtectedRoute = ({ user, allowedRole, redirectTo = '/' , loginUrl = '/login', children }) => {
   useEffect(() => {
     if (!user) return;
     if (user.role !== allowedRole) {
@@ -34,7 +35,7 @@ const RoleProtectedRoute = ({ user, allowedRole, redirectTo = '/' , children }) 
     }
   }, [user, allowedRole]);
 
-  if (!user) return <Navigate to="/login" />;
+  if (!user) return <Navigate to={loginUrl} />;
   if (user.role !== allowedRole) return <Navigate to={redirectTo} />;
   return children;
 };
@@ -64,9 +65,10 @@ function App() {
               <Route path="/profile" element={user ? <ProfileSettings /> : <Navigate to="/login" />} />
               <Route path="/buyer-dashboard" element={<RoleProtectedRoute user={user} allowedRole="BUYER"><BuyerDashboard /></RoleProtectedRoute>} />
               <Route path="/seller-dashboard" element={<RoleProtectedRoute user={user} allowedRole="SELLER"><SellerDashboard /></RoleProtectedRoute>} />
-              <Route path="/admin-dashboard" element={<RoleProtectedRoute user={user} allowedRole="ADMIN"><AdminDashboard /></RoleProtectedRoute>} />
+              <Route path="/admin-dashboard" element={<RoleProtectedRoute user={user} allowedRole="ADMIN" loginUrl="/admin-login"><AdminDashboard /></RoleProtectedRoute>} />
               <Route path="/seller/:id" element={<SellerProfile />} />
               <Route path="/legal/:section" element={<Legal />} />
+              <Route path="/contact" element={<Contact />} />
             </Routes>
           </Suspense>
         </main>

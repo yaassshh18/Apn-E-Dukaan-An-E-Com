@@ -38,7 +38,8 @@ class ProductViewSet(viewsets.ModelViewSet):
         if category_slug:
             queryset = queryset.filter(category__slug=category_slug)
         if search:
-            queryset = queryset.filter(title__icontains=search)
+            from django.db.models import Q
+            queryset = queryset.filter(Q(title__icontains=search) | Q(tags__icontains=search))
         if location:
             queryset = queryset.filter(seller__location__icontains=location)
         if min_price:

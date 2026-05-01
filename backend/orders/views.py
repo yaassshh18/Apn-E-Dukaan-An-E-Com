@@ -31,14 +31,14 @@ class CartViewSet(viewsets.ViewSet):
         except Product.DoesNotExist:
             return Response({"error": "Product not found"}, status=status.HTTP_404_NOT_FOUND)
             
-        if quantity > product.stock:
+        cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
+        
+        new_quantity = quantity if created else cart_item.quantity + quantity
+        
+        if new_quantity > product.stock:
             return Response({"error": f"Only {product.stock} items left in stock"}, status=status.HTTP_400_BAD_REQUEST)
             
-        cart_item, created = CartItem.objects.get_or_create(cart=cart, product=product)
-        if not created:
-            cart_item.quantity += quantity
-        else:
-            cart_item.quantity = quantity
+        cart_item.quantity = new_quantity
         cart_item.save()
         
         cart = Cart.objects.prefetch_related('items__product__seller', 'items__product__category').get(id=cart.id)

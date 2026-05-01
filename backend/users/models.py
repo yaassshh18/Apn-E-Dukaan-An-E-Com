@@ -7,7 +7,7 @@ class User(AbstractUser):
         ('SELLER', 'Seller'),
         ('ADMIN', 'Admin'),
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='BUYER')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='BUYER')
     ADMIN_LEVEL_CHOICES = (
         ('MODERATOR', 'Moderator'),
         ('OPS_ADMIN', 'Ops Admin'),
@@ -23,7 +23,7 @@ class User(AbstractUser):
     is_suspended = models.BooleanField(default=False)
     
     def __str__(self):
-        return f"{self.username} - {self.role}"
+        return self.username
 
 class Notification(models.Model):
     user = models.ForeignKey('users.User', on_delete=models.CASCADE, related_name='notifications')

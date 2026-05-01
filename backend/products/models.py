@@ -22,6 +22,7 @@ class Product(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     stock = models.PositiveIntegerField(default=1)
+    tags = models.CharField(max_length=500, blank=True, null=True, help_text="Comma separated tags for search")
     views_count = models.PositiveIntegerField(default=0)
     purchases_count = models.PositiveIntegerField(default=0)
 

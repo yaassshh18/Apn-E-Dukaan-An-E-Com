@@ -1,11 +1,15 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff } from 'lucide-react';
 import api from '../api/axios';
 
 const ForgetPass = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
+    const role = searchParams.get('role');
+    const loginUrl = role === 'admin' ? '/admin-login' : '/login';
+
     const [step, setStep] = useState(1);
 
     const [email, setEmail] = useState('');
@@ -21,9 +25,12 @@ const ForgetPass = () => {
         e.preventDefault();
         setIsLoading(true);
         try {
-            await api.post('auth/password-reset/request/', { email });
+            const res = await api.post('auth/password-reset/request/', { email });
             setStep(2);
             toast.success('OTP sent to your email.');
+            if (res.data?.dev_otp) {
+                toast.success(`Development mode: OTP is ${res.data.dev_otp}`, { duration: 25000, icon: '🔑' });
+            }
         } catch (error) {
             toast.error(error.response?.data?.error || 'Failed to send OTP.');
         } finally {
@@ -57,8 +64,11 @@ const ForgetPass = () => {
     const handleResendOtp = async () => {
         setIsLoading(true);
         try {
-            await api.post('auth/password-reset/request/', { email });
+            const res = await api.post('auth/password-reset/request/', { email });
             toast.success('A new OTP has been sent to your email.');
+            if (res.data?.dev_otp) {
+                toast.success(`Development mode: OTP is ${res.data.dev_otp}`, { duration: 25000, icon: '🔑' });
+            }
         } catch (error) {
             toast.error(error.response?.data?.error || 'Failed to resend OTP.');
         } finally {
@@ -84,7 +94,7 @@ const ForgetPass = () => {
                 new_password: newPassword
             });
             toast.success('Password updated successfully. Please log in.');
-            navigate('/login');
+            navigate(loginUrl);
         } catch (error) {
             toast.error(error.response?.data?.error || 'Password reset failed.');
         } finally {
@@ -99,9 +109,6 @@ const ForgetPass = () => {
                     <h1 className="text-3xl font-display font-extrabold text-gray-900 mb-2">
                         Forgot Password
                     </h1>
-                    <p className="text-gray-500 text-sm">
-                        Step {step} of 3
-                    </p>
                 </div>
 
                 {step === 1 && (
@@ -238,7 +245,7 @@ const ForgetPass = () => {
                 )}
 
                 <div className="mt-8 text-center">
-                    <Link to="/login" className="text-sm font-semibold text-secondary hover:text-primary transition-colors">
+                    <Link to={loginUrl} className="text-sm font-semibold text-secondary hover:text-primary transition-colors">
                         Back to Login
                     </Link>
                 </div>

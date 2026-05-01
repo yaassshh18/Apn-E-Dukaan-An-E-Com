@@ -1,9 +1,28 @@
+import hashlib
 import random
 import string
-import hashlib
-from django.utils import timezone
 from datetime import timedelta
+
+from django.conf import settings
+from django.utils import timezone
+
 from users.models import OTP
+
+
+def dev_otp_response(otp_code):
+    """
+    When EXPOSE_OTP_IN_API is True, attach the raw OTP to API JSON (local/dev only).
+    """
+    if not otp_code or not getattr(settings, "EXPOSE_OTP_IN_API", False):
+        return {}
+    return {
+        "dev_otp": otp_code,
+        "dev_note": (
+            "This OTP is included for development. For real email delivery, set "
+            "EMAIL_HOST_USER, EMAIL_HOST_PASSWORD (Gmail: use an App Password), and "
+            "USE_SMTP_EMAIL=true in backend/.env."
+        ),
+    }
 
 def generate_otp_code(length=6):
     """Generate a random numeric OTP."""

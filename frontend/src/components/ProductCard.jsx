@@ -41,7 +41,15 @@ const ProductCard = ({ product }) => {
                 {/* Gradient Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10"></div>
                 {product.image ? (
-                    <img src={product.image} alt={product.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                    <img 
+                        src={product.image.startsWith('http') ? product.image : `${(api.defaults.baseURL || '').replace(/\/api\/?$/, '')}${product.image.startsWith('/') ? '' : '/'}${product.image}`} 
+                        alt={product.title} 
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                        onError={(e) => {
+                            e.currentTarget.onerror = null;
+                            e.currentTarget.src = 'https://placehold.co/320x320?text=No+Image';
+                        }}
+                    />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">No Image</div>
                 )}

@@ -12,7 +12,7 @@ export const AuthProvider = ({ children }) => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('refresh_token');
         sessionStorage.removeItem('access_token');
-        sessionStorage.removeItem('refresh_token');
+        sessionStorage.removeItem('refresh_token');``
         setUser(null);
     }, []);
 
@@ -41,9 +41,12 @@ export const AuthProvider = ({ children }) => {
     }, [fetchProfile]);
 
     // Step 1: Request 2FA OTP
-    const initiateLogin = async (username, email, password) => {
+    const initiateLogin = async (emailOrUsername, password, role = null) => {
         resetAuthState();
-        const res = await api.post('auth/login/', { username, email, password });
+        const isEmail = emailOrUsername.includes('@');
+        const payload = isEmail ? { email: emailOrUsername, password } : { username: emailOrUsername, password };
+        if (role) payload.role = role;
+        const res = await api.post('auth/login/', payload);
         return res.data; // e.g. { message: "Credentials verified...", email: "..." }
     };
 
@@ -68,16 +71,33 @@ export const AuthProvider = ({ children }) => {
     };
 
     const register = async (userData) => {
-        await api.post('auth/register/', userData);
-        // After registration, user must verify registration OTP.
+        const res = await api.post('auth/register/', userData);
+        return res.data;
     };
 
-    const verifyRegistration = async (email, otp_code) => {
-        await api.post('auth/register/verify-otp/', { email, otp_code });
+    const verifyRegistration = async (email, otp_code, rememberMe = true) => {
+        resetAuthState();
+        const res = await api.post('auth/register/verify-otp/', { email, otp_code });
+        if (res.data.access && res.data.refresh) {
+            if (rememberMe) {
+                localStorage.setItem('access_token', res.data.access);
+                localStorage.setItem('refresh_token', res.data.refresh);
+                sessionStorage.removeItem('access_token');
+                sessionStorage.removeItem('refresh_token');
+            } else {
+                sessionStorage.setItem('access_token', res.data.access);
+                sessionStorage.setItem('refresh_token', res.data.refresh);
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+            }
+            await fetchProfile();
+        }
+        return res.data;
     };
 
     const resendOtp = async (email, action = 'login') => {
-        await api.post('auth/resend-otp/', { email, action });
+        const res = await api.post('auth/resend-otp/', { email, action });
+        return res.data;
     };
 
     return (

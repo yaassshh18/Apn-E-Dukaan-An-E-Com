@@ -7,7 +7,8 @@ from users.views import (
     RegisterView, ProfileView, NotificationViewSet, ReportViewSet,
     VerifyRegistrationOTPView, RequestLoginOTPView, VerifyLoginOTPView, ResendOTPView, LoginWithOTPView,
     RequestPasswordResetOTPView, VerifyPasswordResetOTPView, ResetPasswordView,
-    AdminUserManagementViewSet, AdminAuditLogViewSet, AdminAnalyticsView
+    AdminUserManagementViewSet, AdminAuditLogViewSet, AdminAnalyticsView,
+    ContactUsView
 )
 from products.views import CategoryViewSet, ProductViewSet, ReviewViewSet, WishlistViewSet
 from orders.views import CartViewSet, OrderViewSet
@@ -52,6 +53,7 @@ urlpatterns = [
     
     path('api/auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('api/auth/profile/', ProfileView.as_view(), name='profile'),
+    path('api/auth/contact/', ContactUsView.as_view(), name='contact_us'),
     path('api/admin/analytics/', AdminAnalyticsView.as_view(), name='admin_analytics'),
     path('api/seller/<int:id>/', __import__('users.views').views.SellerProfileView.as_view(), name='seller_profile'),
     

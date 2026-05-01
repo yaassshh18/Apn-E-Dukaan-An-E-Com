@@ -114,6 +114,17 @@ const SellerDashboard = () => {
         }
     };
 
+    const handleDeleteProduct = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this listing? This action cannot be undone.')) return;
+        try {
+            await api.delete(`products/${id}/`);
+            toast.success("Product deleted successfully");
+            fetchData();
+        } catch {
+            toast.error("Failed to delete product");
+        }
+    };
+
     return (
         <div className="min-h-screen bg-background pt-32 pb-20 px-6 lg:px-10">
             <div className="max-w-7xl mx-auto space-y-8 animate-slide-up">
@@ -293,6 +304,7 @@ const SellerDashboard = () => {
                                 <div className="flex items-center gap-2">
                                     <span className="text-primary font-black text-sm bg-primary/5 px-2 py-1 rounded">₹{prod.price}</span>
                                     <button onClick={() => handleEditProduct(prod)} className="text-xs px-2 py-1 rounded border border-gray-200 hover:bg-gray-50">Edit</button>
+                                    <button onClick={() => handleDeleteProduct(prod.id)} className="text-xs px-2 py-1 rounded bg-red-50 text-red-600 hover:bg-red-100 transition-colors">Delete</button>
                                     {prod.stock <= 3 && (
                                         <button onClick={() => handleQuickRestock(prod)} className="text-xs px-2 py-1 rounded bg-green-50 text-green-700">Restock</button>
                                     )}

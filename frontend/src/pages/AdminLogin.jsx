@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Eye, EyeOff, Shield } from 'lucide-react';
 import { AuthContext } from '../context/AuthContext';
@@ -7,8 +7,7 @@ import { AuthContext } from '../context/AuthContext';
 const AdminLogin = () => {
     const { user, initiateLogin, verifyLogin, resendOtp, logout } = useContext(AuthContext);
     const navigate = useNavigate();
-    const [username, setUsername] = useState('Admin');
-    const [email, setEmail] = useState('apn.e.dukaan.main@gmail.com');
+    const [emailOrUsername, setEmailOrUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(true);
@@ -16,6 +15,9 @@ const AdminLogin = () => {
     const [otpCode, setOtpCode] = useState('');
     const [userEmail, setUserEmail] = useState('');
     const [countdown, setCountdown] = useState(60);
+    const location = useLocation();
+
+    // Auto-redirect removed to avoid race conditions with window.location.href
 
     useEffect(() => {
         let timer;
@@ -28,11 +30,14 @@ const AdminLogin = () => {
     const handleLoginSubmit = async (e) => {
         e.preventDefault();
         try {
-            const data = await initiateLogin(username, email, password);
+            const data = await initiateLogin(emailOrUsername, password, 'ADMIN');
             setUserEmail(data.email);
             setIs2FAStarted(true);
             setCountdown(60);
             toast.success('Admin OTP sent to registered email.');
+            if (data.dev_otp) {
+                toast.success(`Development mode: OTP is ${data.dev_otp}`, { duration: 25000, icon: '🔑' });
+            }
         } catch (error) {
             toast.error(error.response?.data?.error || 'Invalid admin credentials');
         }
@@ -49,7 +54,7 @@ const AdminLogin = () => {
                 return;
             }
             toast.success('Admin login successful');
-            navigate('/admin-dashboard');
+            window.location.href = '/admin-dashboard';
         } catch (error) {
             toast.error(error.response?.data?.error || 'Invalid OTP Code');
         }
@@ -58,9 +63,12 @@ const AdminLogin = () => {
     const handleResend = async () => {
         if (countdown > 0) return;
         try {
-            await resendOtp(userEmail, 'login');
+            const resendData = await resendOtp(userEmail, 'login');
             setCountdown(60);
             toast.success('Verification code resent.');
+            if (resendData?.dev_otp) {
+                toast.success(`Development mode: OTP is ${resendData.dev_otp}`, { duration: 25000, icon: '🔑' });
+            }
         } catch {
             toast.error('Failed to resend code');
         }
@@ -77,39 +85,13 @@ const AdminLogin = () => {
                     <p className="text-gray-500 mt-1">Restricted access for admin users only.</p>
                 </div>
 
-                {user && (
-                    <div className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-                        <p className="text-sm font-semibold text-amber-900">
-                            You are logged in as {user.username} ({user.role}).
-                        </p>
-                        <div className="mt-3 flex gap-2">
-                            <button
-                                type="button"
-                                onClick={() => navigate(user.role === 'ADMIN' ? '/admin-dashboard' : '/')}
-                                className="px-3 py-1.5 rounded-lg text-sm font-semibold border border-amber-300 text-amber-900 hover:bg-amber-100"
-                            >
-                                Continue as current user
-                            </button>
-                            <button
-                                type="button"
-                                onClick={logout}
-                                className="px-3 py-1.5 rounded-lg text-sm font-semibold bg-gray-900 text-white hover:bg-black"
-                            >
-                                Switch account
-                            </button>
-                        </div>
-                    </div>
-                )}
+                {/* Form starts here */}
 
                 {!is2FAStarted ? (
-                    <form onSubmit={handleLoginSubmit} className="space-y-4">
+                    <form onSubmit={handleLoginSubmit} className="space-y-4" autoComplete="off">
                         <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Username</label>
-                            <input className="input-field" value={username} onChange={(e) => setUsername(e.target.value)} required />
-                        </div>
-                        <div>
-                            <label className="block text-sm font-semibold text-gray-700 mb-1">Email Address</label>
-                            <input type="email" className="input-field" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                            <label className="block text-sm font-semibold text-gray-700 mb-1">Email or Username</label>
+                            <input className="input-field" value={emailOrUsername} onChange={(e) => setEmailOrUsername(e.target.value)} required autoComplete="off" />
                         </div>
                         <div>
                             <label className="block text-sm font-semibold text-gray-700 mb-1">Password</label>
@@ -120,6 +102,7 @@ const AdminLogin = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
+                                    autoComplete="new-password"
                                 />
                                 <button
                                     type="button"
@@ -130,15 +113,20 @@ const AdminLogin = () => {
                                 </button>
                             </div>
                         </div>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <input
-                                type="checkbox"
-                                checked={rememberMe}
-                                onChange={(e) => setRememberMe(e.target.checked)}
-                                className="w-4 h-4 rounded text-primary focus:ring-primary border-gray-300"
-                            />
-                            <span className="text-sm text-gray-600">Remember me</span>
-                        </label>
+                        <div className="flex items-center justify-between">
+                            <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="w-4 h-4 rounded text-primary focus:ring-primary border-gray-300"
+                                />
+                                <span className="text-sm text-gray-600">Remember me</span>
+                            </label>
+                            <Link to="/forgot-password?role=admin" className="text-sm font-semibold text-secondary hover:text-primary transition-colors">
+                                Forgot Password?
+                            </Link>
+                        </div>
                         <button type="submit" className="btn-primary w-full py-3">Continue to Admin OTP</button>
                     </form>
                 ) : (

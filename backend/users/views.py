@@ -14,8 +14,15 @@ from .serializers import (
     OTPRequestSerializer, OTPVerifySerializer, AdminUserSerializer, AdminAuditLogSerializer
 )
 from django.core.signing import TimestampSigner, BadSignature, SignatureExpired
-from .utils.otp import create_otp_for_email, verify_otp
-from .utils.email import send_registration_otp, send_welcome_email, send_login_otp, send_login_alert, send_password_reset_otp
+from .utils.otp import create_otp_for_email, verify_otp, dev_otp_response
+from .utils.email import (
+    EmailDeliveryError,
+    send_login_alert,
+    send_login_otp,
+    send_password_reset_otp,
+    send_registration_otp,
+    send_welcome_email,
+)
 
 
 class IsAdminRole(permissions.BasePermission):
@@ -28,15 +35,29 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = (permissions.AllowAny,)
     serializer_class = RegisterSerializer
 
-    def perform_create(self, serializer):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        user.is_verified = False # ensure it requires OTP verification
+        user.is_verified = False
         user.save()
-        
-        # generate OTP and send
+
+        otp_code = None
         if user.email:
-            otp_code = create_otp_for_email(user.email)
-            send_registration_otp(user.email, otp_code)
+            try:
+                otp_code = create_otp_for_email(user.email)
+                send_registration_otp(user.email, otp_code)
+            except EmailDeliveryError as exc:
+                user.delete()
+                return Response(
+                    {'error': str(exc)},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
+
+        headers = self.get_success_headers(serializer.data)
+        data = dict(serializer.data)
+        data.update(dev_otp_response(otp_code))
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class ProfileView(generics.RetrieveUpdateAPIView):
@@ -158,15 +179,26 @@ class VerifyRegistrationOTPView(APIView):
             try:
                 user = User.objects.get(email=email)
                 if user.is_verified:
-                    return Response({'message': 'User is already verified.'}, status=status.HTTP_200_OK)
-                
+                    refresh = RefreshToken.for_user(user)
+                    return Response({
+                        'message': 'User is already verified.',
+                        'refresh': str(refresh),
+                        'access': str(refresh.access_token),
+                        'user': UserSerializer(user).data,
+                    }, status=status.HTTP_200_OK)
+
                 user.is_verified = True
                 user.save()
-                
-                # Send welcome email asynchronously
+
                 send_welcome_email(user.email, user.username)
-                
-                return Response({'message': 'Account verified successfully. You can now login.'}, status=status.HTTP_200_OK)
+
+                refresh = RefreshToken.for_user(user)
+                return Response({
+                    'message': 'Account verified successfully.',
+                    'refresh': str(refresh),
+                    'access': str(refresh.access_token),
+                    'user': UserSerializer(user).data,
+                }, status=status.HTTP_200_OK)
             except User.DoesNotExist:
                 return Response({'error': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
                 
@@ -179,31 +211,69 @@ class LoginWithOTPView(APIView):
         username = request.data.get('username')
         email = request.data.get('email')
         password = request.data.get('password')
+        role = request.data.get('role')
 
-        if not username or not email or not password:
-            return Response({'error': 'Username, email, and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not password or (not username and not email):
+            return Response({'error': 'Username or email, and password are required.'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            user = User.objects.get(email__iexact=email, username__iexact=username)
+            if email:
+                user = User.objects.get(email__iexact=email)
+            else:
+                user = User.objects.get(username__iexact=username)
+                
+            if role and user.role != role:
+                return Response({'error': 'Invalid role credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
             if user.check_password(password):
                 if user.is_suspended or not user.is_active:
                     return Response({'error': 'Account is suspended. Please contact support.'}, status=status.HTTP_403_FORBIDDEN)
                 if not user.is_verified:
                     return Response({'error': 'Please verify your account first.'}, status=status.HTTP_403_FORBIDDEN)
                 
-                # Generate OTP and send email
                 otp_code = create_otp_for_email(user.email)
-                send_login_otp(user.email, otp_code)
-                
+                try:
+                    send_login_otp(user.email, otp_code)
+                except EmailDeliveryError as exc:
+                    return Response(
+                        {'error': str(exc)},
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+
                 return Response({
                     'message': 'Credentials verified. OTP sent to email.',
                     'email': user.email,
-                    'username': user.username
+                    'username': user.username,
+                    **dev_otp_response(otp_code),
                 }, status=status.HTTP_200_OK)
             else:
-                return Response({'error': 'Invalid username, email, or password'}, status=status.HTTP_401_UNAUTHORIZED)
+                return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
         except User.DoesNotExist:
-            return Response({'error': 'Invalid username, email, or password'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+class ContactUsView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        name = request.data.get('name')
+        email = request.data.get('email')
+        subject = request.data.get('subject')
+        category = request.data.get('category')
+        message = request.data.get('message')
+
+        if not all([name, email, subject, category, message]):
+            return Response({'error': 'All fields are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # In a real app, we would send this via email.
+        # For now, we simulate success to avoid breaking dev environments without SMTP configured.
+        print(f"--- CONTACT FORM SUBMISSION ---")
+        print(f"From: {name} <{email}>")
+        print(f"Category: {category}")
+        print(f"Subject: {subject}")
+        print(f"Message:\n{message}")
+        print(f"-------------------------------")
+
+        return Response({'message': 'Message sent successfully'}, status=status.HTTP_200_OK)
 
 
 class RequestLoginOTPView(APIView):
@@ -219,8 +289,17 @@ class RequestLoginOTPView(APIView):
                     return Response({'error': 'Please verify your account first.'}, status=status.HTTP_403_FORBIDDEN)
                 
                 otp_code = create_otp_for_email(email)
-                send_login_otp(email, otp_code)
-                return Response({'message': 'Login OTP sent to your email.'}, status=status.HTTP_200_OK)
+                try:
+                    send_login_otp(email, otp_code)
+                except EmailDeliveryError as exc:
+                    return Response(
+                        {'error': str(exc)},
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+                return Response({
+                    'message': 'Login OTP sent to your email.',
+                    **dev_otp_response(otp_code),
+                }, status=status.HTTP_200_OK)
             except User.DoesNotExist:
                 return Response({'error': 'No account found with this email.'}, status=status.HTTP_404_NOT_FOUND)
                 
@@ -297,13 +376,21 @@ class ResendOTPView(APIView):
             try:
                 user = User.objects.get(email=email)
                 otp_code = create_otp_for_email(email)
-                
-                if action == 'registration':
-                    send_registration_otp(email, otp_code)
-                else:
-                    send_login_otp(email, otp_code)
-                    
-                return Response({'message': f'New OTP sent for {action}.'}, status=status.HTTP_200_OK)
+                try:
+                    if action == 'registration':
+                        send_registration_otp(email, otp_code)
+                    else:
+                        send_login_otp(email, otp_code)
+                except EmailDeliveryError as exc:
+                    return Response(
+                        {'error': str(exc)},
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+
+                return Response({
+                    'message': f'New OTP sent for {action}.',
+                    **dev_otp_response(otp_code),
+                }, status=status.HTTP_200_OK)
             except User.DoesNotExist:
                 return Response({'error': 'No account found with this email.'}, status=status.HTTP_404_NOT_FOUND)
                 
@@ -319,8 +406,17 @@ class RequestPasswordResetOTPView(APIView):
             try:
                 user = User.objects.get(email=email)
                 otp_code = create_otp_for_email(email)
-                send_password_reset_otp(email, otp_code)
-                return Response({'message': 'Password reset OTP sent to your email.'}, status=status.HTTP_200_OK)
+                try:
+                    send_password_reset_otp(email, otp_code)
+                except EmailDeliveryError as exc:
+                    return Response(
+                        {'error': str(exc)},
+                        status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    )
+                return Response({
+                    'message': 'Password reset OTP sent to your email.',
+                    **dev_otp_response(otp_code),
+                }, status=status.HTTP_200_OK)
             except User.DoesNotExist:
                 return Response({'error': 'No account found with this email.'}, status=status.HTTP_404_NOT_FOUND)
                 
@@ -423,9 +519,15 @@ class AdminUserManagementViewSet(viewsets.ReadOnlyModelViewSet):
     def force_password_reset(self, request, pk=None):
         user = self.get_object()
         otp_code = create_otp_for_email(user.email)
-        send_password_reset_otp(user.email, otp_code)
+        try:
+            send_password_reset_otp(user.email, otp_code)
+        except EmailDeliveryError as exc:
+            return Response({'error': str(exc)}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         AdminAuditLog.objects.create(actor=request.user, action='USER_PASSWORD_RESET_FORCED', target_user=user)
-        return Response({'message': 'Password reset OTP sent to user email'})
+        return Response({
+            'message': 'Password reset OTP sent to user email',
+            **dev_otp_response(otp_code),
+        })
 
 
 class AdminAnalyticsView(APIView):

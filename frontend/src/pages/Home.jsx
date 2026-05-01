@@ -69,7 +69,8 @@ const Home = () => {
                 const currentProducts = res.data?.results || res.data || [];
                 setProducts(currentProducts);
 
-                const allowedIds = new Set(currentProducts.map((p) => p.id));
+                const productsById = new Map(currentProducts.map((p) => [p.id, p]));
+                const allowedIds = new Set(productsById.keys());
                 const recent = JSON.parse(localStorage.getItem('recentlyViewed') || '[]');
                 const cleanedRecent = recent.filter(
                     (item) =>
@@ -77,8 +78,11 @@ const Home = () => {
                         item?.title &&
                         !BLOCKED_RECENT_TITLES.some((blocked) => item.title.toLowerCase().includes(blocked))
                 );
-                localStorage.setItem('recentlyViewed', JSON.stringify(cleanedRecent));
-                setRecentProducts(cleanedRecent);
+                const refreshedRecent = cleanedRecent
+                    .map((item) => productsById.get(item.id) || item)
+                    .filter(Boolean);
+                localStorage.setItem('recentlyViewed', JSON.stringify(refreshedRecent));
+                setRecentProducts(refreshedRecent);
             } catch (error) {
                 console.error(error);
             }
